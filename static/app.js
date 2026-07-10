@@ -34,9 +34,6 @@ let speechRun = 0;
 let sentenceBuffer = "";
 let speechFlushTimer = null;
 let ttsWarningShown = false;
-let voiceHasStarted = false;
-let pendingAssistantText = "";
-let activeAssistantId = "";
 let ttsSocket = null;
 let ttsSocketPromise = null;
 let ttsToken = "";
@@ -407,14 +404,11 @@ async function sendMessage(text, mode = "text") {
   resetSpeechState();
   speechRun += 1;
   ttsWarningShown = false;
-  voiceHasStarted = false;
-  pendingAssistantText = "";
   const runId = speechRun;
   const shouldSpeak = mode === "voice" && Boolean(settings.cartesia_api_key);
   appendMessage("user", message, mode);
   render();
   const assistant = appendMessage("assistant", "", shouldSpeak ? "voice" : "text");
-  activeAssistantId = assistant.id;
   input.value = "";
   setBusy(true);
   const name = characterName();
@@ -448,8 +442,7 @@ async function sendMessage(text, mode = "text") {
         const event = JSON.parse(line);
         if (event.type === "delta") {
           assistantText += event.text;
-          if (shouldSpeak && !voiceHasStarted) pendingAssistantText = assistantText;
-          else updateMessage(assistant.id, assistantText);
+          updateMessage(assistant.id, assistantText);
           if (shouldSpeak) queueSpeech(sanitizeSpeechText(event.text), runId, false);
         } else if (event.type === "error") {
           throw new Error(event.error);
@@ -526,9 +519,7 @@ function resetSpeechState() {
 }
 
 function revealVoiceTranscript() {
-  voiceHasStarted = true;
   chatPanel.classList.add("is-speaking");
-  if (pendingAssistantText && activeAssistantId) updateMessage(activeAssistantId, pendingAssistantText);
 }
 
 function queueSpeech(delta, runId, force) {
@@ -540,7 +531,7 @@ function queueSpeech(delta, runId, force) {
   speechFlushTimer = setTimeout(() => {
     const delayed = takeSpeechChunk(true);
     if (delayed) speakChunk(delayed, runId, false);
-  }, 220);
+  }, 420);
 }
 
 function takeSpeechChunk(force) {
@@ -554,13 +545,34 @@ function takeSpeechChunk(force) {
     sentenceBuffer = text.slice(strong[0].length);
     return strong[1].trim();
   }
-  if (text.length >= 72) {
-    const boundary = Math.max(text.lastIndexOf(" ", 72), text.lastIndexOf(",", 72));
-    const cut = boundary > 36 ? boundary + 1 : 72;
-    sentenceBuffer = text.slice(cut);
-    return text.slice(0, cut).trim();
+  if (text.length >= 46) {
+    const maxCut = Math.min(text.length, 92);
+    const boundary = Math.max(
+      text.lastIndexOf(",", maxCut),
+      text.lastIndexOf(";", maxCut),
+      text.lastIndexOf(":", maxCut),
+      text.lastIndexOf(" ", maxCut),
+    );
+    if (boundary >= 30) {
+      const cut = boundary + 1;
+      sentenceBuffer = text.slice(cut);
+      return text.slice(0, cut).trim();
+    }
   }
-  if (force && text.length >= 12) {
+  if (force && text.length >= 32) {
+    const boundary = Math.max(
+      text.lastIndexOf(","),
+      text.lastIndexOf(";"),
+      text.lastIndexOf(":"),
+      text.lastIndexOf(" "),
+    );
+    if (boundary >= 18) {
+      const cut = boundary + 1;
+      sentenceBuffer = text.slice(cut);
+      return text.slice(0, cut).trim();
+    }
+  }
+  if (force && /[.!?]$/.test(text)) {
     sentenceBuffer = "";
     return text.trim();
   }
