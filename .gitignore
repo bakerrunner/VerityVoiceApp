@@ -9,8 +9,8 @@ __pycache__/
 *.py[cod]
 
 # Local media and generated assets
-NEW_MAYA.mp3
-NEW_MAYA.wav
+*.mp3
+*.wav
 *.log
 
 # Editor and OS noise

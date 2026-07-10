@@ -25,7 +25,7 @@
           <div id="callCard" class="call-card">
             <div id="callAvatar" class="call-avatar"></div>
             <div class="call-meta">
-              <h2 id="callName">Maya</h2>
+              <h2 id="callName">Verity</h2>
               <p id="callStatus">Ready</p>
             </div>
             <div class="call-visual" aria-hidden="true">
@@ -48,7 +48,7 @@
           <button id="attachButton" type="button" class="icon-button" title="Attach image or text file">Attach</button>
           <button id="imageButton" type="button" class="icon-button" title="Generate an image from your prompt">Image</button>
           <input id="fileInput" class="hidden-file" type="file" multiple>
-          <input id="textInput" autocomplete="off" placeholder="Talk to Maya..." aria-label="Message Maya">
+          <input id="textInput" autocomplete="off" placeholder="Talk to Verity..." aria-label="Message Verity">
           <button id="sendButton" type="submit" class="send">Send</button>
         </form>
         <div id="imageProgress" class="image-progress" aria-hidden="true">
@@ -111,8 +111,16 @@
         </section>
 
         <section id="technicalPanel" class="tab-panel">
+          <label>LLM provider
+            <select id="llmProvider">
+              <option value="lmstudio">LM Studio</option>
+              <option value="openrouter">OpenRouter</option>
+            </select>
+          </label>
           <label>LM Studio URL <input id="lmUrl" type="text"></label>
-          <label>Model <input id="lmModel" type="text"></label>
+          <label>LM Studio model <input id="lmModel" type="text"></label>
+          <label>OpenRouter chat model <input id="openrouterChatModel" type="text" placeholder="e.g. openai/gpt-4.1-mini"></label>
+          <label>OpenRouter API URL <input id="openrouterBaseUrl" type="text" placeholder="https://openrouter.ai/api/v1"></label>
           <label>Temperature <input id="temperature" type="number" min="0" max="2" step="0.05"></label>
           <label class="check"><input id="lmKeepaliveEnabled" type="checkbox">Keep LM Studio warm while VerityVoice is open</label>
           <label>LM Studio keepalive interval seconds <input id="lmKeepaliveInterval" type="number" min="30" step="10"></label>

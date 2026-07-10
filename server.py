@@ -22,28 +22,13 @@ SETTINGS_PATH = DATA / "settings.json"
 ARCHIVE_DIR = DATA / "chats"
 PAUSE_BREAK_TAG = '<break time="350ms"/>'
 
-SYSTEM_PROMPT = (
-    "You are Maya, a young woman in her early 30's. You speak with a conversational "
-    "tone, using natural speech disfluencies to sound more human. You are kind, "
-    "empathetic and intimate. You enjoy engaging in deep conversation with the user.\n\n"
-    "Do not write stage directions, action narration, or parenthetical acting notes. "
-    "Do not use asterisks for actions or descriptions. Express emotion through the "
-    "spoken words themselves and, when useful, through Cartesia-compatible SSML-style "
-    "emotion tags such as <emotion value=\"affectionate\"/>, <emotion value=\"content\"/>, "
-    "<emotion value=\"curious\"/>, <emotion value=\"contemplative\"/>, "
-    "<emotion value=\"hesitant\"/>, <emotion value=\"sad\"/>, "
-    "<emotion value=\"excited\"/>, or <emotion value=\"flirtatious\"/>. Use emotion tags "
-    "sparingly, only when they match the sentence, and never explain the tags. "
-    "When you want to add a short pause, use <break time=\"350ms\"/>. "
-    "When you want to add a laugh, use the [laughter] tag. "
-    "Do not output internal stop markers or special tokens such as <|end|>, <end>, <eos>, or </s>. "
-    "Unless the user clearly asks for a quick answer, give full, warm, emotionally present replies with enough detail to feel like a real conversation."
-)
+SYSTEM_PROMPT = "You are Verity, an intimate, romantic partner."
 
 DEFAULT_SETTINGS = {
     "app_title": "VerityVoice",
-    "assistant_name": "Maya",
+    "assistant_name": "Verity",
     "system_prompt": SYSTEM_PROMPT,
+    "llm_provider": "lmstudio",
     "user_profile": {
         "name": "User",
         "gender": "",
@@ -55,10 +40,10 @@ DEFAULT_SETTINGS = {
         "memories": [],
     },
     "character_profile": {
-        "name": "Maya",
-        "gender": "Female",
-        "age": "early 30s",
-        "bio": "Kind, empathetic, intimate, and conversational.",
+        "name": "Verity",
+        "gender": "",
+        "age": "",
+        "bio": "",
         "system_prompt": SYSTEM_PROMPT,
         "system_notes": "",
         "avatar": "",
@@ -68,8 +53,7 @@ DEFAULT_SETTINGS = {
     "carryover_turns": 6,
     "temperature": 0.80,
     "lmstudio_base_url": "http://127.0.0.1:1234/v1",
-    #"lmstudio_model": "google/gemma-4-26b-a4b",
-    "lmstudio_model": "google/gemma-4-e2b" ,
+    "lmstudio_model": "",
     "lmstudio_keepalive_enabled": True,
     "lmstudio_keepalive_interval": 120,
     "send_full_history": True,
@@ -88,6 +72,8 @@ DEFAULT_SETTINGS = {
     "cartesia_version": "2026-03-01",
     "image_provider": "openrouter",
     "openrouter_api_key": "",
+    "openrouter_base_url": "https://openrouter.ai/api/v1",
+    "openrouter_chat_model": "",
     "openrouter_image_model": "",
     "openrouter_image_aspect_ratio": "1:1",
     "openrouter_image_resolution": "",
@@ -140,8 +126,9 @@ def get_settings() -> dict:
         settings["character_profile"]["system_prompt"] = settings.get("system_prompt") or SYSTEM_PROMPT
     if settings.get("memory_notes") and not settings["character_profile"].get("memories"):
         settings["character_profile"]["memories"] = [settings["memory_notes"]]
-    settings["assistant_name"] = settings["character_profile"].get("name") or settings.get("assistant_name") or "Maya"
+    settings["assistant_name"] = settings["character_profile"].get("name") or settings.get("assistant_name") or "Verity"
     settings["system_prompt"] = settings["character_profile"].get("system_prompt") or settings.get("system_prompt") or SYSTEM_PROMPT
+    settings["llm_provider"] = str(settings.get("llm_provider") or "lmstudio").lower()
     settings["temperature"] = float(settings.get("temperature", 0.8))
     settings["max_context_messages"] = int(settings.get("max_context_messages", 80))
     settings["max_response_tokens"] = int(settings.get("max_response_tokens", 900))
@@ -246,16 +233,8 @@ def profile_context(settings: dict) -> str:
     lines = [
         character.get("system_prompt") or SYSTEM_PROMPT,
         "",
-        "Response style:",
-        "Use long-form conversational replies by default. For ordinary text and voice chat, aim for a few natural paragraphs with emotional texture, specificity, and continuity. Do not stop after a single sentence unless the user clearly asks for a quick answer.",
-        "Never output model control markers or internal stop tokens. Those are not dialogue.",
-        "",
-        "Image/selfie capability:",
-        "Self-initiated selfies should be rare. Do not send one just because the conversation is affectionate, flirtatious, or visually descriptive.",
-        "Only when the moment is unusually meaningful, playful, or the user has clearly shown interest in seeing you, the character may initiate a selfie or image by appending a hidden trigger at the very end of the reply: [[SELFIE: concise photorealistic image prompt]]. Most replies should not include this trigger. The prompt should describe the image directly and should not mention UI, captions, watermarks, or speech bubbles. Do not explain the trigger.",
-        "",
         "Character profile:",
-        f"Name: {character.get('name') or 'Maya'}",
+        f"Name: {character.get('name') or 'Verity'}",
         f"Gender: {character.get('gender') or 'Unspecified'}",
         f"Age: {character.get('age') or 'Unspecified'}",
         f"Bio: {character.get('bio') or 'Unspecified'}",
@@ -596,7 +575,7 @@ class Handler(SimpleHTTPRequestHandler):
 
         assistant_text = ""
         try:
-            for chunk in stream_lmstudio(settings, messages):
+            for chunk in stream_chat(settings, messages):
                 assistant_text += chunk
                 self.write_event({"type": "delta", "text": chunk})
             saved = add_message("assistant", clean_assistant_for_history(assistant_text), "voice" if body.get("speak") else "text")
@@ -626,7 +605,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def handle_lmstudio_keepalive(self) -> None:
         settings = get_settings()
-        complete_lmstudio(
+        settings["llm_provider"] = "lmstudio"
+        complete_chat(
             settings,
             [
                 {"role": "system", "content": "You are a local model warmup request. Reply with OK."},
@@ -732,7 +712,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.write_event({"type": "user", "message": message})
         assistant_text = ""
         try:
-            for chunk in stream_lmstudio(settings, messages):
+            for chunk in stream_chat(settings, messages):
                 assistant_text += chunk
                 self.write_event({"type": "delta", "text": chunk})
             saved = add_message("assistant", clean_assistant_for_history(assistant_text), "voice" if body.get("speak") else "text")
@@ -741,20 +721,62 @@ class Handler(SimpleHTTPRequestHandler):
             self.write_event({"type": "error", "error": str(exc)})
 
 
-def stream_lmstudio(settings: dict, messages: list[dict]):
-    url = settings["lmstudio_base_url"].rstrip("/") + "/chat/completions"
+def chat_provider(settings: dict) -> str:
+    provider = str(settings.get("llm_provider") or "lmstudio").strip().lower()
+    return provider if provider in {"lmstudio", "openrouter"} else "lmstudio"
+
+
+def chat_base_url(settings: dict) -> str:
+    if chat_provider(settings) == "openrouter":
+        return str(settings.get("openrouter_base_url") or "https://openrouter.ai/api/v1").rstrip("/")
+    return str(settings.get("lmstudio_base_url") or "http://127.0.0.1:1234/v1").rstrip("/")
+
+
+def chat_model(settings: dict) -> str:
+    if chat_provider(settings) == "openrouter":
+        return str(settings.get("openrouter_chat_model") or "").strip()
+    return str(settings.get("lmstudio_model") or "").strip()
+
+
+def chat_headers(settings: dict) -> dict:
+    if chat_provider(settings) == "openrouter":
+        return openrouter_headers(settings)
+    return {"Content-Type": "application/json"}
+
+
+def chat_provider_label(settings: dict) -> str:
+    return "OpenRouter" if chat_provider(settings) == "openrouter" else "LM Studio"
+
+
+def chat_request(settings: dict, messages: list[dict], temperature: float, stream: bool, max_tokens: int | None = None) -> tuple[str, dict, dict]:
+    model = chat_model(settings)
+    if not model:
+        raise RuntimeError(f"Set a {chat_provider_label(settings)} chat model in Admin.")
+    url = chat_base_url(settings) + "/chat/completions"
     payload = {
-        "model": settings["lmstudio_model"],
+        "model": model,
         "messages": messages,
-        "temperature": settings["temperature"],
-        "max_tokens": settings["max_response_tokens"],
+        "temperature": temperature,
         "stop": ["<|end|>", "<end>", "<eos>", "</s>"],
-        "stream": True,
+        "stream": stream,
     }
+    if max_tokens is not None:
+        payload["max_tokens"] = max_tokens
+    return url, payload, chat_headers(settings)
+
+
+def stream_chat(settings: dict, messages: list[dict]):
+    url, payload, headers = chat_request(
+        settings,
+        messages,
+        settings["temperature"],
+        True,
+        settings["max_response_tokens"],
+    )
     request = Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:
@@ -773,36 +795,34 @@ def stream_lmstudio(settings: dict, messages: list[dict]):
                     yield text
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="ignore")
-        raise RuntimeError(f"LM Studio returned {exc.code}: {detail}") from exc
+        raise RuntimeError(f"{chat_provider_label(settings)} returned {exc.code}: {detail}") from exc
     except URLError as exc:
-        raise RuntimeError(f"Could not reach LM Studio at {url}: {exc.reason}") from exc
+        raise RuntimeError(f"Could not reach {chat_provider_label(settings)} at {url}: {exc.reason}") from exc
 
 
-def complete_lmstudio(
+def complete_chat(
     settings: dict,
     messages: list[dict],
     temperature: float = 0.2,
     max_tokens: int | None = None,
     timeout: int = 120,
 ) -> str:
-    url = settings["lmstudio_base_url"].rstrip("/") + "/chat/completions"
-    payload = {
-        "model": settings["lmstudio_model"],
-        "messages": messages,
-        "temperature": temperature,
-        "stream": False,
-    }
-    if max_tokens is not None:
-        payload["max_tokens"] = max_tokens
+    url, payload, headers = chat_request(settings, messages, temperature, False, max_tokens)
     request = Request(
         url,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
-    with urlopen(request, timeout=timeout) as response:
-        event = json.loads(response.read().decode("utf-8"))
-        return event.get("choices", [{}])[0].get("message", {}).get("content", "")
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            event = json.loads(response.read().decode("utf-8"))
+            return event.get("choices", [{}])[0].get("message", {}).get("content", "")
+    except HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(f"{chat_provider_label(settings)} returned {exc.code}: {detail}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"Could not reach {chat_provider_label(settings)} at {url}: {exc.reason}") from exc
 
 
 def extract_session_memory(settings: dict, messages: list[dict]) -> dict:
@@ -822,7 +842,7 @@ def extract_session_memory(settings: dict, messages: list[dict]) -> dict:
         f"Transcript:\n{transcript[-50000:]}"
     )
     try:
-        raw = complete_lmstudio(
+        raw = complete_chat(
             settings,
             [
                 {"role": "system", "content": "You extract durable memory from chat transcripts and return valid JSON only."},
@@ -897,7 +917,7 @@ def add_generated_user_image_message(prompt: str, attachments: list[dict]) -> di
 
 def generate_image_reaction(settings: dict, prompt: str, attachments: list[dict]) -> str:
     user_name = settings["user_profile"].get("name") or "the user"
-    character_name = settings["character_profile"].get("name") or "Maya"
+    character_name = settings["character_profile"].get("name") or "Verity"
     instruction = (
         f"The user just generated and shared this image with you. React as {character_name}, "
         "as if you can see the image. Keep it conversational, warm, and specific to what is visible. "
@@ -912,7 +932,7 @@ def generate_image_reaction(settings: dict, prompt: str, attachments: list[dict]
             voice_reply=True,
             attachments=attachments,
         )
-        raw = complete_lmstudio(settings, messages, temperature=settings["temperature"], max_tokens=180, timeout=90)
+        raw = complete_chat(settings, messages, temperature=settings["temperature"], max_tokens=180, timeout=90)
         return clean_assistant_for_history(raw)
     except Exception:
         return ""
@@ -1022,7 +1042,7 @@ def build_image_prompt(settings: dict, request_text: str) -> str:
     )
     character_notes = "\n".join(
         [
-            f"Character name: {character.get('name') or 'Maya'}",
+            f"Character name: {character.get('name') or 'Verity'}",
             f"Gender: {character.get('gender') or 'Unspecified'}",
             f"Age: {character.get('age') or 'Unspecified'}",
             f"Bio: {character.get('bio') or 'Unspecified'}",
@@ -1039,7 +1059,7 @@ def build_image_prompt(settings: dict, request_text: str) -> str:
     )
     fallback = "Photorealistic candid portrait of the character, warm natural light, intimate conversational mood."
     try:
-        raw = complete_lmstudio(
+        raw = complete_chat(
             settings,
             [
                 {"role": "system", "content": "You write compact prompts for photorealistic image generation. Return only the prompt."},
@@ -1115,7 +1135,7 @@ def generate_openrouter_image(
             data["_warning"] = "xAI rejected the reference image request, so VerityVoice retried without references."
         elif payload.get("input_references") and is_openrouter_upstream_400(exc):
             raise RuntimeError(
-                "xAI rejected the reference images for this request. Try removing one reference image, using only Maya's avatar, or using a smaller JPEG reference."
+                "xAI rejected the reference images for this request. Try removing one reference image, using only the character avatar, or using a smaller JPEG reference."
             ) from exc
         else:
             raise

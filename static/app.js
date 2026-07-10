@@ -102,7 +102,7 @@ function setStatus(text) {
 
 function updateCallIdentity() {
   const character = settings?.character_profile || {};
-  const name = character.name || "Maya";
+  const name = character.name || "Verity";
   callName.textContent = name;
   if (character.avatar) {
     callAvatar.style.backgroundImage = `url(${character.avatar})`;
@@ -207,7 +207,7 @@ function render() {
   if (!messages.length) {
     const empty = document.createElement("div");
     empty.className = "empty";
-    empty.textContent = "Maya is ready. Start with text, or use the mic if your browser supports speech recognition.";
+    empty.textContent = "Verity is ready. Start with text, or use the mic if your browser supports speech recognition.";
     messagesEl.append(empty);
     return;
   }
@@ -231,11 +231,11 @@ function renderMessage(message) {
   if (image) {
     avatar.style.backgroundImage = `url(${image})`;
   } else {
-    avatar.textContent = initials(profile?.name || (message.role === "assistant" ? "Maya" : "User"));
+    avatar.textContent = initials(profile?.name || (message.role === "assistant" ? "Verity" : "User"));
   }
   const label = document.createElement("span");
   label.textContent = message.role === "assistant"
-    ? (settings?.character_profile?.name || "Maya").toUpperCase()
+    ? (settings?.character_profile?.name || "Verity").toUpperCase()
     : (settings?.user_profile?.name || "User").toUpperCase();
   meta.append(avatar, label);
 
@@ -315,8 +315,8 @@ async function loadState() {
   settings = data.settings;
   appTitle.textContent = settings.app_title || "VerityVoice";
   document.title = settings.app_title || "VerityVoice";
-  input.placeholder = `Talk to ${settings.character_profile?.name || "Maya"}...`;
-  input.setAttribute("aria-label", `Message ${settings.character_profile?.name || "Maya"}`);
+  input.placeholder = `Talk to ${settings.character_profile?.name || "Verity"}...`;
+  input.setAttribute("aria-label", `Message ${settings.character_profile?.name || "Verity"}`);
   fillAdmin();
   updateCallIdentity();
   render();
@@ -347,8 +347,11 @@ function fillAdmin() {
   document.querySelector("#characterSystemNotes").value = character.system_notes || "";
   document.querySelector("#characterMemories").value = Array.isArray(character.memories) ? character.memories.join("\n") : "";
 
+  document.querySelector("#llmProvider").value = settings.llm_provider || "lmstudio";
   document.querySelector("#lmUrl").value = settings.lmstudio_base_url || "";
   document.querySelector("#lmModel").value = settings.lmstudio_model || "";
+  document.querySelector("#openrouterChatModel").value = settings.openrouter_chat_model || "";
+  document.querySelector("#openrouterBaseUrl").value = settings.openrouter_base_url || "https://openrouter.ai/api/v1";
   document.querySelector("#temperature").value = settings.temperature ?? 0.8;
   document.querySelector("#lmKeepaliveEnabled").checked = settings.lmstudio_keepalive_enabled !== false;
   document.querySelector("#lmKeepaliveInterval").value = settings.lmstudio_keepalive_interval || 120;
@@ -398,8 +401,11 @@ function adminPayload() {
       system_notes: document.querySelector("#characterSystemNotes").value.trim(),
       memories: linesFromTextarea("#characterMemories"),
     },
+    llm_provider: document.querySelector("#llmProvider").value,
     lmstudio_base_url: document.querySelector("#lmUrl").value.trim(),
     lmstudio_model: document.querySelector("#lmModel").value.trim(),
+    openrouter_chat_model: document.querySelector("#openrouterChatModel").value.trim(),
+    openrouter_base_url: document.querySelector("#openrouterBaseUrl").value.trim(),
     temperature: Number(document.querySelector("#temperature").value),
     lmstudio_keepalive_enabled: document.querySelector("#lmKeepaliveEnabled").checked,
     lmstudio_keepalive_interval: Number(document.querySelector("#lmKeepaliveInterval").value),
@@ -455,6 +461,7 @@ function startLmStudioKeepalive() {
     clearInterval(keepaliveTimer);
     keepaliveTimer = null;
   }
+  if ((settings?.llm_provider || "lmstudio") !== "lmstudio") return;
   if (!settings?.lmstudio_keepalive_enabled) return;
   const seconds = Math.max(30, Number(settings.lmstudio_keepalive_interval || 120));
   keepaliveTimer = setInterval(() => pingLmStudio(), seconds * 1000);
@@ -494,7 +501,8 @@ async function sendMessage(text, mode = "text") {
   activeAssistantId = assistant.id;
   input.value = "";
   setBusy(true);
-  setStatus(voiceOn && !settings.cartesia_api_key ? "Maya is replying - add a Cartesia key in Admin for voice" : shouldSpeak ? "Maya is replying with voice..." : "Maya is replying...");
+  const characterName = settings.character_profile?.name || "Verity";
+  setStatus(voiceOn && !settings.cartesia_api_key ? `${characterName} is replying - add a Cartesia key in Admin for voice` : shouldSpeak ? `${characterName} is replying with voice...` : `${characterName} is replying...`);
   if (shouldSpeak) startStreamingSpeech(runId);
   let pendingSelfiePrompt = "";
 
@@ -863,7 +871,7 @@ async function postGeneratedImage() {
   render();
   const assistant = appendMessage("assistant", "", shouldSpeak ? "voice" : "text");
   activeAssistantId = assistant.id;
-  setStatus(shouldSpeak ? "Posting image - Maya is replying with voice..." : "Posting image...");
+  setStatus(shouldSpeak ? `Posting image - ${settings.character_profile?.name || "Verity"} is replying with voice...` : "Posting image...");
   if (shouldSpeak) startStreamingSpeech(runId);
   try {
     const res = await fetch("/api/post-generated-image-stream", {
@@ -943,7 +951,7 @@ function setImagePosting(posting) {
 }
 
 function requestSelfieFromMessage(message) {
-  const characterName = settings?.character_profile?.name || "Maya";
+  const characterName = settings?.character_profile?.name || "Verity";
   const visibleText = formatForDisplay(message?.content || "");
   const promptSeed = [
     `Create a natural candid selfie of ${characterName} based on the current chat moment.`,
