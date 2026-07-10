@@ -65,7 +65,7 @@ DEFAULT_SETTINGS = {
     "voice_prefill_text": "",
     "memory_notes": "",
     "cartesia_api_key": "",
-    "cartesia_voice_id": "21cd940a-e771-4ae6-b0c5-1757e2748493",
+    "cartesia_voice_id": "f786b574-daa5-4673-aa0c-cbe3e8534c02",
     "cartesia_model_id": "sonic-3.5",
     "cartesia_stt_model": "ink-2",
     "cartesia_version": "2026-03-01",
