@@ -16,6 +16,10 @@ const callView = document.querySelector("#callView");
 const callAvatar = document.querySelector("#callAvatar");
 const callName = document.querySelector("#callName");
 const callStatus = document.querySelector("#callStatus");
+const userAvatarFile = document.querySelector("#userAvatarFile");
+const characterAvatarFile = document.querySelector("#characterAvatarFile");
+const userAvatarPreview = document.querySelector("#userAvatarPreview");
+const characterAvatarPreview = document.querySelector("#characterAvatarPreview");
 
 let store = null;
 let settings = null;
@@ -45,6 +49,8 @@ let keepaliveInFlight = false;
 let orbLevel = 0;
 let orbTargetLevel = 0;
 let orbAnimationFrame = 0;
+let pendingUserAvatar = null;
+let pendingCharacterAvatar = null;
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -65,10 +71,37 @@ function characterName() {
   return settings?.character_profile?.name || "Verity";
 }
 
+function userName() {
+  return settings?.user_profile?.name || "User";
+}
+
+function avatarForRole(role) {
+  if (role === "assistant") return settings?.character_profile?.avatar_image || "";
+  return settings?.user_profile?.avatar_image || "";
+}
+
+function applyAvatar(node, image, fallbackName) {
+  if (!node) return;
+  if (image) {
+    node.style.backgroundImage = `url("${image}")`;
+    node.textContent = "";
+    node.classList.add("has-image");
+  } else {
+    node.style.backgroundImage = "";
+    node.textContent = initials(fallbackName);
+    node.classList.remove("has-image");
+  }
+}
+
 function updateCallIdentity() {
   const name = characterName();
   callName.textContent = name;
-  callAvatar.textContent = initials(name);
+  applyAvatar(callAvatar, avatarForRole("assistant"), name);
+}
+
+function updateAdminAvatarPreviews() {
+  applyAvatar(userAvatarPreview, pendingUserAvatar ?? settings?.user_profile?.avatar_image, userName());
+  applyAvatar(characterAvatarPreview, pendingCharacterAvatar ?? settings?.character_profile?.avatar_image, characterName());
 }
 
 function setCallMode(active) {
@@ -164,20 +197,24 @@ function renderMessage(message) {
   node.className = `message-row ${message.role}`;
   node.dataset.id = message.id || "";
 
+  const stack = document.createElement("div");
+  stack.className = "message-stack";
   const meta = document.createElement("span");
   meta.className = "message-label";
   const avatar = document.createElement("span");
   avatar.className = "message-avatar";
-  avatar.textContent = initials(message.role === "assistant" ? characterName() : (settings?.user_profile?.name || "User"));
+  const displayName = message.role === "assistant" ? characterName() : userName();
+  applyAvatar(avatar, avatarForRole(message.role), displayName);
   const label = document.createElement("span");
-  label.textContent = message.role === "assistant" ? characterName().toUpperCase() : (settings?.user_profile?.name || "User").toUpperCase();
+  label.textContent = displayName.toUpperCase();
   meta.append(avatar, label);
 
   const bubble = document.createElement("div");
   bubble.className = "message-bubble";
   bubble.textContent = formatForDisplay(message.content || "");
 
-  node.append(meta, bubble);
+  stack.append(meta, bubble);
+  node.append(stack);
   return node;
 }
 
@@ -229,6 +266,10 @@ async function loadState() {
 function fillAdmin() {
   const user = settings.user_profile || {};
   const character = settings.character_profile || {};
+  pendingUserAvatar = null;
+  pendingCharacterAvatar = null;
+  if (userAvatarFile) userAvatarFile.value = "";
+  if (characterAvatarFile) characterAvatarFile.value = "";
   document.querySelector("#userName").value = user.name || "";
   document.querySelector("#userGender").value = user.gender || "";
   document.querySelector("#userBirthdate").value = user.birthdate || "";
@@ -261,6 +302,7 @@ function fillAdmin() {
   document.querySelector("#fastVoiceContext").checked = settings.fast_voice_context !== false;
   document.querySelector("#voiceMessages").value = settings.voice_context_messages || 40;
   document.querySelector("#carryoverTurns").value = settings.carryover_turns ?? 6;
+  updateAdminAvatarPreviews();
 }
 
 function adminPayload() {
@@ -278,6 +320,7 @@ function adminPayload() {
       location: document.querySelector("#userLocation").value.trim(),
       bio: document.querySelector("#userBio").value.trim(),
       system_notes: document.querySelector("#userSystemNotes").value.trim(),
+      avatar_image: pendingUserAvatar ?? currentUser.avatar_image ?? "",
     },
     character_profile: {
       ...currentCharacter,
@@ -288,6 +331,7 @@ function adminPayload() {
       system_prompt: document.querySelector("#characterSystemPrompt").value.trim(),
       system_notes: document.querySelector("#characterSystemNotes").value.trim(),
       memories: linesFromTextarea("#characterMemories"),
+      avatar_image: pendingCharacterAvatar ?? currentCharacter.avatar_image ?? "",
     },
     llm_provider: document.querySelector("#llmProvider").value,
     lmstudio_base_url: document.querySelector("#lmUrl").value.trim(),
@@ -926,6 +970,18 @@ function startVoiceInput(options = {}) {
   });
 }
 
+function readAvatarFile(file, onLoaded) {
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    setStatus("Choose an image file for the avatar");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => onLoaded(String(reader.result || ""));
+  reader.onerror = () => setStatus("Could not read avatar image");
+  reader.readAsDataURL(file);
+}
+
 function stopInteraction() {
   if (aborter) aborter.abort();
   stopListening();
@@ -971,6 +1027,20 @@ resetChat.addEventListener("click", async () => {
 
 adminOpen.addEventListener("click", () => adminDialog.showModal());
 saveSettings.addEventListener("click", () => saveAdmin().catch((error) => setStatus(error.message)));
+
+userAvatarFile.addEventListener("change", () => {
+  readAvatarFile(userAvatarFile.files?.[0], (image) => {
+    pendingUserAvatar = image;
+    updateAdminAvatarPreviews();
+  });
+});
+
+characterAvatarFile.addEventListener("change", () => {
+  readAvatarFile(characterAvatarFile.files?.[0], (image) => {
+    pendingCharacterAvatar = image;
+    updateAdminAvatarPreviews();
+  });
+});
 
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {

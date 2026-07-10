@@ -3,6 +3,26 @@
   "assistant_name": "Verity",
   "system_prompt": "You are Verity, an intimate, romantic partner.",
   "llm_provider": "lmstudio",
+  "user_profile": {
+    "name": "User",
+    "gender": "",
+    "birthdate": "",
+    "location": "",
+    "bio": "",
+    "system_notes": "",
+    "memories": [],
+    "avatar_image": ""
+  },
+  "character_profile": {
+    "name": "Verity",
+    "gender": "",
+    "age": "",
+    "bio": "",
+    "system_prompt": "You are Verity, an intimate, romantic partner.",
+    "system_notes": "",
+    "memories": [],
+    "avatar_image": ""
+  },
   "lmstudio_base_url": "http://127.0.0.1:1234/v1",
   "lmstudio_model": "",
   "lmstudio_keepalive_enabled": true,

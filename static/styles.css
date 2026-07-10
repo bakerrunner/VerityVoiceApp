@@ -343,6 +343,12 @@ button:disabled {
   font-weight: 700;
 }
 
+.message-avatar.has-image,
+.call-avatar.has-image,
+.admin-avatar.has-image {
+  color: transparent;
+}
+
 .message-row.user .message-label {
   color: #9fcbb2;
 }
@@ -537,6 +543,28 @@ dialog::backdrop {
 
 .tab-panel.is-active {
   display: grid;
+}
+
+.avatar-field {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.admin-avatar {
+  width: 78px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: #17221d;
+  background-size: cover;
+  background-position: center;
+  color: #d9eadf;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .check {

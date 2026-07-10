@@ -37,6 +37,7 @@ DEFAULT_SETTINGS = {
         "bio": "",
         "system_notes": "",
         "memories": [],
+        "avatar_image": "",
     },
     "character_profile": {
         "name": "Verity",
@@ -46,6 +47,7 @@ DEFAULT_SETTINGS = {
         "system_prompt": SYSTEM_PROMPT,
         "system_notes": "",
         "memories": [],
+        "avatar_image": "",
     },
     "previous_session_summary": "",
     "carryover_turns": 6,
