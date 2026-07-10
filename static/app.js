@@ -208,11 +208,26 @@ function renderMessage(message) {
 
   const bubble = document.createElement("div");
   bubble.className = "message-bubble";
-  bubble.textContent = formatForDisplay(message.content || "");
+  setBubbleContent(bubble, message.content || "", message.role === "assistant");
 
   stack.append(meta, bubble);
   node.append(stack);
   return node;
+}
+
+function setBubbleContent(node, content, showThinking = false) {
+  const text = formatForDisplay(content || "");
+  node.classList.toggle("is-posting", showThinking && !text);
+  node.replaceChildren();
+  if (showThinking && !text) {
+    const dots = document.createElement("span");
+    dots.className = "thought-dots";
+    dots.setAttribute("aria-label", `${characterName()} is thinking`);
+    dots.append(document.createElement("i"), document.createElement("i"), document.createElement("i"));
+    node.append(dots);
+    return;
+  }
+  node.textContent = text;
 }
 
 function formatForDisplay(text) {
@@ -239,7 +254,7 @@ function updateMessage(id, content) {
   const message = store.messages.find((item) => item.id === id);
   if (message) message.content = content;
   const node = messagesEl.querySelector(`[data-id="${id}"] .message-bubble`);
-  if (node) node.textContent = formatForDisplay(content);
+  if (node) setBubbleContent(node, content, false);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
