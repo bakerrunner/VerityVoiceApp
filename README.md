@@ -1,25 +1,30 @@
 # VerityVoice
 
-A configurable AI companion chat app with persistent memory, text chat, voice call mode, and hands-free mic flow.
+VerityVoice is a local-first AI companion chat app with text chat, a phone-style voice call mode, configurable character and user profiles, and persistent local memory.
 
-VerityVoice can use LM Studio for local models or OpenRouter for hosted models. Runtime conversations, profile settings, memories, and API keys are stored locally in `data/` and are intentionally excluded from Git.
+The app can use LM Studio for local OpenAI-compatible chat models or OpenRouter for hosted chat models. Cartesia is currently used for both speech-to-text and text-to-speech. Users provide their own API keys in Admin or through environment variables.
+
+Runtime conversations, settings, memories, avatars, and API keys are stored locally in `data/` and are intentionally excluded from Git.
 
 ## Features
 
-- Text chat with saved conversation history.
+- Streaming text chat with a thinking indicator while the character is replying.
 - Phone-style Call mode with hands-free turn taking after the user clicks `Mic`.
 - Cartesia streaming TTS and Cartesia Ink-2 mic transcription.
-- Local profile, character, memory, and conversation JSON storage.
+- User photo and character avatar uploads for chat and call views.
+- Configurable user profile, character profile, system prompt, and long-term memory.
 - LM Studio or OpenRouter chat completions configured in Admin.
-- Windows launcher for desktop, LAN, or WireGuard access.
+- Local JSON storage for profiles, conversations, memories, and settings.
+- Windows launcher for local, LAN, or private WireGuard access.
 
 ## Requirements
 
 - Python 3.11 or newer.
-- LM Studio with the OpenAI-compatible local server enabled, or an OpenRouter API key.
-- A loaded chat model available at `http://127.0.0.1:1234/v1`.
-- Optional: Cartesia API key for voice output and Ink-2 transcription.
-- Optional: OpenRouter API key for hosted chat models.
+- A chat model provider:
+  - LM Studio with the OpenAI-compatible local server enabled, or
+  - an OpenRouter API key and chat model.
+- Optional for voice: Cartesia API key.
+- A modern browser with microphone permission enabled for voice chat.
 
 ## Run Locally
 
@@ -32,8 +37,7 @@ python server.py
 ```
 
 4. Open `http://127.0.0.1:8790`.
-5. Open Admin in the app and choose an LLM provider.
-6. Set either the LM Studio model name or the OpenRouter chat model.
+5. Open Admin and configure the app.
 
 On first run, VerityVoice creates:
 
@@ -54,27 +58,54 @@ Double-click `Start-VerityVoice.bat`, or run:
 The launcher binds to all local interfaces so you can use:
 
 - Server PC: `http://127.0.0.1:8790`
-- LAN/WireGuard device: `http://YOUR-PC-IP:8790`
+- LAN or WireGuard device: `http://YOUR-PC-IP:8790`
 
 Use a private network such as WireGuard. Do not expose the app directly to the public internet.
 
-## Voice
+## Admin Setup
 
-Voice output uses Cartesia when a Cartesia key is configured in Admin or through `CARTESIA_API_KEY`.
+Admin has three sections:
 
-Mic transcription uses Cartesia Ink-2.
+- User Settings: user name, profile details, notes, and user photo.
+- Character Settings: character name, avatar, bio, system prompt, notes, and long-term memory/lore.
+- Technical: LLM provider, LM Studio settings, OpenRouter settings, Cartesia voice settings, and context controls.
 
-In Call mode, the user clicks `Mic` once to start voice chat. The mic and voice loop stay active until the user clicks `End`, even if they switch back to the Text tab.
-
-## System Prompt
-
-The default character prompt is intentionally thin:
+The default system prompt is intentionally thin:
 
 ```text
 You are Verity, an intimate, romantic partner.
 ```
 
-Users are expected to replace or expand the system prompt in Admin.
+Users are expected to replace or expand the character system prompt in Admin.
+
+## LLM Providers
+
+For LM Studio:
+
+- Choose `LM Studio` as the LLM provider.
+- Set `LM Studio URL`, usually `http://127.0.0.1:1234/v1`.
+- Set `LM Studio model` to the exact model ID loaded in LM Studio.
+
+For OpenRouter:
+
+- Choose `OpenRouter` as the LLM provider.
+- Set `OpenRouter API URL`, usually `https://openrouter.ai/api/v1`.
+- Add an `OpenRouter API key`.
+- Set `OpenRouter chat model`, such as `openai/gpt-4.1-mini` or another model available to your account.
+
+API keys can also be supplied with environment variables:
+
+- `OPENROUTER_API_KEY`
+- `CARTESIA_API_KEY`
+
+## Voice
+
+Voice uses Cartesia only for now:
+
+- TTS: Cartesia streaming text-to-speech.
+- STT: Cartesia Ink-2 mic transcription.
+
+In Call mode, the user clicks `Mic` once to start voice chat. The mic and voice loop stay active until the user clicks `End`, even if they switch back to the Text tab or minimize the browser window.
 
 ## Private Data
 
@@ -83,14 +114,26 @@ The following are intentionally ignored by Git:
 - `data/settings.json`
 - `data/conversation.json`
 - `data/chats/`
-- local audio and cache files
+- `data/*.tmp`
+- local audio and log files
 
-Do not commit local runtime data. It may contain personal conversations, profile details, memories, and API keys.
+Do not commit local runtime data. It may contain personal conversations, profile details, memories, avatar images, and API keys.
+
+## Clean Testing
+
+To test the first-run experience, stop the app and remove local runtime files from `data/`:
+
+- `settings.json`
+- `conversation.json`
+- files inside `chats/`
+
+Keep `data/settings.example.json` and `data/.gitkeep`.
 
 ## Release Prep Checklist
 
-- Review default app name, profile, and character copy.
+- Test a clean clone with no local `data/settings.json`.
+- Confirm LM Studio setup works.
+- Confirm OpenRouter setup works.
+- Confirm Cartesia STT and TTS work.
 - Add screenshots or a short demo video.
 - Add a license before publishing a public release.
-- Test on a clean clone with no `data/settings.json`.
-- Confirm voice works with Cartesia STT and TTS.
