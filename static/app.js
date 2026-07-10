@@ -407,8 +407,8 @@ async function sendMessage(text, mode = "text") {
   const runId = speechRun;
   const shouldSpeak = mode === "voice" && Boolean(settings.cartesia_api_key);
   appendMessage("user", message, mode);
-  render();
   const assistant = appendMessage("assistant", "", shouldSpeak ? "voice" : "text");
+  render();
   input.value = "";
   setBusy(true);
   const name = characterName();
