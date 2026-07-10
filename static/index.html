@@ -92,8 +92,9 @@
           </label>
           <label>LM Studio URL <input id="lmUrl" type="text"></label>
           <label>LM Studio model <input id="lmModel" type="text"></label>
-          <label>OpenRouter chat model <input id="openrouterChatModel" type="text" placeholder="e.g. openai/gpt-4.1-mini"></label>
           <label>OpenRouter API URL <input id="openrouterBaseUrl" type="text" placeholder="https://openrouter.ai/api/v1"></label>
+          <label>OpenRouter API key <input id="openrouterKey" type="password" placeholder="Leave blank to keep saved key"></label>
+          <label>OpenRouter chat model <input id="openrouterChatModel" type="text" placeholder="e.g. openai/gpt-4.1-mini"></label>
           <label>Temperature <input id="temperature" type="number" min="0" max="2" step="0.05"></label>
           <label class="check"><input id="lmKeepaliveEnabled" type="checkbox">Keep LM Studio warm while VerityVoice is open</label>
           <label>LM Studio keepalive interval seconds <input id="lmKeepaliveInterval" type="number" min="30" step="10"></label>
@@ -101,7 +102,6 @@
           <label>Cartesia voice ID <input id="cartesiaVoice" type="text"></label>
           <label>Cartesia model <input id="cartesiaModel" type="text"></label>
           <label>Cartesia STT model <input id="cartesiaSttModel" type="text"></label>
-          <label>OpenRouter API key <input id="openrouterKey" type="password" placeholder="Leave blank to keep saved key"></label>
           <label class="check"><input id="fullHistory" type="checkbox">Send full transcript as context</label>
           <label>Context messages when full history is off <input id="maxMessages" type="number" min="4" step="1"></label>
           <label class="check"><input id="fastVoiceContext" type="checkbox">Use faster recent context for voice</label>
