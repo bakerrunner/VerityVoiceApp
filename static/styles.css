@@ -450,7 +450,7 @@ button:disabled {
 
 .composer {
   display: grid;
-  grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 10px;
   padding: 16px;
   border-top: 1px solid var(--line);
