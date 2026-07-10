@@ -9,7 +9,7 @@ import uuid
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -36,7 +36,6 @@ DEFAULT_SETTINGS = {
         "location": "",
         "bio": "",
         "system_notes": "",
-        "photo": "",
         "memories": [],
     },
     "character_profile": {
@@ -46,7 +45,6 @@ DEFAULT_SETTINGS = {
         "bio": "",
         "system_prompt": SYSTEM_PROMPT,
         "system_notes": "",
-        "avatar": "",
         "memories": [],
     },
     "previous_session_summary": "",
@@ -67,19 +65,11 @@ DEFAULT_SETTINGS = {
     "cartesia_api_key": "",
     "cartesia_voice_id": "21cd940a-e771-4ae6-b0c5-1757e2748493",
     "cartesia_model_id": "sonic-3.5",
-    "use_cartesia_stt": True,
     "cartesia_stt_model": "ink-2",
     "cartesia_version": "2026-03-01",
-    "image_provider": "openrouter",
     "openrouter_api_key": "",
     "openrouter_base_url": "https://openrouter.ai/api/v1",
     "openrouter_chat_model": "",
-    "openrouter_image_model": "",
-    "openrouter_image_aspect_ratio": "1:1",
-    "openrouter_image_resolution": "",
-    "openrouter_image_quality": "medium",
-    "openrouter_image_output_format": "png",
-    "openrouter_use_character_reference": True,
 }
 
 
@@ -157,7 +147,7 @@ def save_store(store: dict) -> None:
     write_json(STORE_PATH, store)
 
 
-def add_message(role: str, content: str, mode: str = "text", attachments: list[dict] | None = None) -> dict:
+def add_message(role: str, content: str, mode: str = "text") -> dict:
     store = load_store()
     message = {
         "id": str(uuid.uuid4()),
@@ -166,8 +156,6 @@ def add_message(role: str, content: str, mode: str = "text", attachments: list[d
         "mode": mode,
         "created_at": now_ms(),
     }
-    if attachments:
-        message["attachments"] = public_attachments(attachments)
     store["messages"].append(message)
     save_store(store)
     return message
@@ -176,7 +164,6 @@ def add_message(role: str, content: str, mode: str = "text", attachments: list[d
 def clean_assistant_for_history(text: str) -> str:
     text = strip_spoken_artifacts(normalize_pause_tags(text))
     text = strip_model_artifacts(text)
-    text = strip_image_triggers(text)
     text = re.sub(r"\*([^*]*)\*", clean_italic_segment, text, flags=re.S)
     text = re.sub(r"<(?:emotion|speed|volume|break)\b[^>\]]*(?:>|\]|$)", " ", text, flags=re.I)
     text = re.sub(r"\[(?!laughter\])[^]]+\]", " ", text, flags=re.I)
@@ -189,10 +176,6 @@ def clean_assistant_for_history(text: str) -> str:
 def normalize_pause_tags(text: str) -> str:
     text = re.sub(r"<pause\s*/>", PAUSE_BREAK_TAG, str(text), flags=re.I)
     return re.sub(r"<\s*break\b[^>\]]*(?:>|\]|$)", PAUSE_BREAK_TAG, text, flags=re.I)
-
-
-def strip_image_triggers(text: str) -> str:
-    return re.sub(r"\[\[SELFIE:[\s\S]*?\]\]", " ", text, flags=re.I)
 
 
 def strip_spoken_artifacts(text: str) -> str:
@@ -263,7 +246,6 @@ def context_messages(
     settings: dict,
     user_content: str,
     voice_reply: bool = False,
-    attachments: list[dict] | None = None,
 ) -> list[dict]:
     store = load_store()
     messages = [{"role": "system", "content": profile_context(settings)}]
@@ -272,158 +254,13 @@ def context_messages(
         history = history[-settings["voice_context_messages"] :]
     elif not settings.get("send_full_history", True):
         history = history[-settings["max_context_messages"] :]
-    image_history_start = max(0, len(history) - 6)
-    for index, item in enumerate(history):
+    for item in history:
         role = item.get("role")
         content = item.get("content")
-        attachments = item.get("attachments") or []
-        if role == "user" and attachments and index >= image_history_start:
-            visible_content = content or item.get("context") or "The user shared this image."
-            messages.append(user_message_for_lmstudio(visible_content, attachments))
-        elif role in {"user", "assistant"} and content:
+        if role in {"user", "assistant"} and content:
             messages.append({"role": role, "content": content})
-    messages.append(user_message_for_lmstudio(user_content, attachments or []))
+    messages.append({"role": "user", "content": user_content})
     return messages
-
-
-def user_message_for_lmstudio(text: str, attachments: list[dict]) -> dict:
-    text_parts = [text]
-    content_parts = []
-    for item in attachments:
-        if item.get("kind") == "text":
-            text_parts.append(
-                f"\n\nAttached file: {item.get('name', 'file')}\n"
-                f"Type: {item.get('type', 'text')}\n"
-                f"Contents:\n{item.get('text', '')}"
-            )
-        elif item.get("kind") == "unsupported":
-            text_parts.append(
-                f"\n\nAttached file: {item.get('name', 'file')} "
-                f"({item.get('type') or 'unknown type'}, {item.get('size', 0)} bytes). "
-                "The app could not extract readable text from this file."
-            )
-
-    content_parts.append({"type": "text", "text": "\n".join(part for part in text_parts if part).strip()})
-    for item in attachments:
-        if item.get("kind") == "image" and item.get("data_url"):
-            content_parts.append({"type": "image_url", "image_url": {"url": item["data_url"]}})
-    if len(content_parts) == 1:
-        return {"role": "user", "content": content_parts[0]["text"]}
-    return {"role": "user", "content": content_parts}
-
-
-def public_attachments(attachments: list[dict]) -> list[dict]:
-    public = []
-    for item in attachments:
-        clean = {
-            "name": item.get("name", "file"),
-            "type": item.get("type", ""),
-            "size": item.get("size", 0),
-            "kind": item.get("kind", "unsupported"),
-        }
-        if item.get("kind") == "image":
-            clean["data_url"] = item.get("data_url", "")
-            if item.get("prompt"):
-                clean["prompt"] = str(item.get("prompt"))[:900]
-            if item.get("context"):
-                clean["context"] = str(item.get("context"))[:1200]
-        public.append(clean)
-    return public
-
-
-def saved_user_content(text: str, attachments: list[dict]) -> str:
-    notes = []
-    for item in attachments:
-        if item.get("kind") == "image":
-            notes.append(f"[Attached image: {item.get('name', 'image')}]")
-        elif item.get("kind") == "text":
-            excerpt = item.get("text", "")[:4000]
-            notes.append(f"[Attached text file: {item.get('name', 'file')}]\n{excerpt}")
-        else:
-            notes.append(f"[Attached file: {item.get('name', 'file')} - not readable as text]")
-    return "\n\n".join([part for part in [text.strip(), *notes] if part])
-
-
-def normalize_attachments(raw_attachments) -> list[dict]:
-    if not isinstance(raw_attachments, list):
-        return []
-    normalized = []
-    for item in raw_attachments[:6]:
-        if not isinstance(item, dict):
-            continue
-        kind = item.get("kind")
-        name = str(item.get("name") or "file")
-        mime = str(item.get("type") or "")
-        size = int(item.get("size") or 0)
-        if kind == "image" and str(item.get("data_url", "")).startswith("data:image/"):
-            clean = {
-                "kind": "image",
-                "name": name,
-                "type": mime,
-                "size": size,
-                "data_url": str(item.get("data_url")),
-            }
-            if item.get("prompt"):
-                clean["prompt"] = str(item.get("prompt"))[:900]
-            if item.get("context"):
-                clean["context"] = str(item.get("context"))[:1200]
-            normalized.append(clean)
-        elif kind == "text":
-            normalized.append(
-                {
-                    "kind": "text",
-                    "name": name,
-                    "type": mime or "text/plain",
-                    "size": size,
-                    "text": str(item.get("text") or "")[:120000],
-                }
-            )
-        else:
-            normalized.append({"kind": "unsupported", "name": name, "type": mime, "size": size})
-    return normalized
-
-
-def normalize_imported_messages(payload) -> list[dict]:
-    if isinstance(payload, dict):
-        if isinstance(payload.get("messages"), list):
-            payload = payload["messages"]
-        elif isinstance(payload.get("conversation"), list):
-            payload = payload["conversation"]
-        elif isinstance(payload.get("history"), list):
-            payload = payload["history"]
-    if not isinstance(payload, list):
-        raise ValueError("Import JSON must be a list or contain messages/history/conversation.")
-
-    normalized = []
-    for item in payload:
-        if isinstance(item, str):
-            normalized.append({"role": "user", "content": item})
-            continue
-        if not isinstance(item, dict):
-            continue
-        role = item.get("role") or item.get("speaker") or item.get("author") or item.get("from")
-        content = item.get("content") or item.get("text") or item.get("message") or item.get("value")
-        if isinstance(content, list):
-            content = " ".join(str(part.get("text", part)) for part in content)
-        if not content:
-            continue
-        role_text = str(role or "").lower()
-        if role_text in {"assistant", "ai", "maya", "ella", "bot", "model"}:
-            role = "assistant"
-        elif role_text in {"system"}:
-            continue
-        else:
-            role = "user"
-        normalized.append(
-            {
-                "id": str(uuid.uuid4()),
-                "role": role,
-                "content": str(content).strip(),
-                "mode": "import",
-                "created_at": int(item.get("created_at") or item.get("timestamp") or now_ms()),
-            }
-        )
-    return normalized
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -462,9 +299,6 @@ class Handler(SimpleHTTPRequestHandler):
         if clean_path == "/api/state":
             self.send_json({"store": load_store(), "settings": public_settings(get_settings())})
             return
-        if clean_path == "/api/openrouter-image-models":
-            self.send_json(openrouter_image_models(get_settings()))
-            return
         return super().do_GET()
 
     def do_POST(self) -> None:
@@ -476,20 +310,12 @@ class Handler(SimpleHTTPRequestHandler):
                 self.handle_settings()
             elif self.path == "/api/reset":
                 self.handle_new_chat()
-            elif self.path == "/api/import":
-                self.handle_import()
             elif self.path == "/api/tts":
                 self.handle_tts()
             elif self.path == "/api/cartesia-token":
                 self.handle_cartesia_token()
             elif self.path == "/api/lmstudio-keepalive":
                 self.handle_lmstudio_keepalive()
-            elif self.path == "/api/generate-image":
-                self.handle_generate_image()
-            elif self.path == "/api/post-generated-image":
-                self.handle_post_generated_image()
-            elif self.path == "/api/post-generated-image-stream":
-                self.handle_post_generated_image_stream()
             else:
                 self.send_error(HTTPStatus.NOT_FOUND)
         except RuntimeError as exc:
@@ -543,30 +369,18 @@ class Handler(SimpleHTTPRequestHandler):
         write_json(STORE_PATH, new_store)
         self.send_json({"ok": True, "store": new_store, "settings": public_settings(settings), "memory": memory})
 
-    def handle_import(self) -> None:
-        body = self.read_body()
-        messages = normalize_imported_messages(body.get("payload"))
-        store = load_store()
-        if body.get("replace"):
-            store["messages"] = messages
-        else:
-            store["messages"].extend(messages)
-        save_store(store)
-        self.send_json({"ok": True, "imported": len(messages), "store": store})
-
     def handle_chat(self) -> None:
         body = self.read_body()
         text = str(body.get("message", "")).strip()
         mode = str(body.get("mode", "text"))
-        attachments = normalize_attachments(body.get("attachments"))
-        if not text and not attachments:
+        if not text:
             self.send_json({"error": "Message is empty."}, HTTPStatus.BAD_REQUEST)
             return
 
         settings = get_settings()
         voice_reply = bool(body.get("speak"))
-        messages = context_messages(settings, text, voice_reply, attachments)
-        add_message("user", saved_user_content(text, attachments), mode, attachments)
+        messages = context_messages(settings, text, voice_reply)
+        add_message("user", text, mode)
 
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
@@ -617,108 +431,6 @@ class Handler(SimpleHTTPRequestHandler):
             timeout=30,
         )
         self.send_json({"ok": True, "warmed_at": now_ms()})
-
-    def handle_generate_image(self) -> None:
-        body = self.read_body()
-        request_text = str(body.get("prompt") or body.get("message") or "").strip()
-        initiator = str(body.get("initiator") or "user")
-        direct_prompt = bool(body.get("direct_prompt"))
-        preview_only = bool(body.get("preview_only"))
-        use_character_reference = bool(body.get("use_character_reference", True))
-        reference_images = [item for item in normalize_attachments(body.get("reference_images")) if item.get("kind") == "image"]
-        settings = get_settings()
-        if settings.get("image_provider") != "openrouter":
-            raise RuntimeError("Image generation is disabled. Set Image provider to OpenRouter in Admin.")
-
-        prompt = request_text[:900] if direct_prompt and request_text else build_image_prompt(settings, request_text)
-        result = generate_openrouter_image(
-            settings,
-            prompt,
-            reference_images,
-            use_character_reference,
-            allow_reference_fallback=initiator == "assistant",
-        )
-        attachments = [
-            {
-                "kind": "image",
-                "name": f"{settings['character_profile'].get('name') or 'character'}-{now_ms()}.{settings.get('openrouter_image_output_format') or 'png'}",
-                "type": f"image/{settings.get('openrouter_image_output_format') or 'png'}",
-                "size": len(result["data_url"]),
-                "data_url": result["data_url"],
-                "prompt": prompt,
-                "context": f"Generated from this prompt: {prompt}",
-            }
-        ]
-        if initiator == "assistant":
-            message = add_message("assistant", "I took a quick selfie for you.", "image", attachments)
-        elif preview_only:
-            self.send_json({
-                "ok": True,
-                "prompt": prompt,
-                "attachments": attachments,
-                "usage": result.get("usage", {}),
-                "warning": result.get("warning", ""),
-            })
-            return
-        else:
-            message = save_generated_user_image(settings, prompt, attachments)
-        self.send_json({
-            "ok": True,
-            "prompt": prompt,
-            "message": message,
-            "store": load_store(),
-            "usage": result.get("usage", {}),
-            "warning": result.get("warning", ""),
-        })
-
-    def handle_post_generated_image(self) -> None:
-        body = self.read_body()
-        prompt = str(body.get("prompt") or "").strip()
-        attachments = normalize_attachments(body.get("attachments"))
-        if not attachments:
-            self.send_json({"error": "No generated image to post."}, HTTPStatus.BAD_REQUEST)
-            return
-        settings = get_settings()
-        message = save_generated_user_image(settings, prompt, attachments)
-        self.send_json({"ok": True, "message": message, "store": load_store()})
-
-    def handle_post_generated_image_stream(self) -> None:
-        body = self.read_body()
-        prompt = str(body.get("prompt") or "").strip()
-        attachments = normalize_attachments(body.get("attachments"))
-        if not attachments:
-            self.send_json({"error": "No generated image to post."}, HTTPStatus.BAD_REQUEST)
-            return
-
-        settings = get_settings()
-        message = add_generated_user_image_message(prompt, attachments)
-        instruction = (
-            "The user just generated and posted this image. React naturally as the character, "
-            "as if you can see the image. Be warm, conversational, and specific to visible details. "
-            "Do not mention technical image generation details, and do not repeat the prompt."
-        )
-        messages = context_messages(
-            settings,
-            f"{instruction}\n\nOriginal image prompt for context: {prompt}",
-            bool(body.get("speak")),
-            attachments,
-        )
-
-        self.send_response(HTTPStatus.OK)
-        self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-
-        self.write_event({"type": "user", "message": message})
-        assistant_text = ""
-        try:
-            for chunk in stream_chat(settings, messages):
-                assistant_text += chunk
-                self.write_event({"type": "delta", "text": chunk})
-            saved = add_message("assistant", clean_assistant_for_history(assistant_text), "voice" if body.get("speak") else "text")
-            self.write_event({"type": "done", "message": saved})
-        except Exception as exc:
-            self.write_event({"type": "error", "error": str(exc)})
 
 
 def chat_provider(settings: dict) -> str:
@@ -892,52 +604,6 @@ def fallback_session_summary(messages: list[dict]) -> str:
     return f"Previous chat had {user_count} user turns and {assistant_count} character turns."
 
 
-def save_generated_user_image(settings: dict, prompt: str, attachments: list[dict]) -> dict:
-    message = add_generated_user_image_message(prompt, attachments)
-    reaction = generate_image_reaction(settings, prompt, attachments)
-    if reaction:
-        add_message("assistant", reaction, "text")
-    return message
-
-
-def add_generated_user_image_message(prompt: str, attachments: list[dict]) -> dict:
-    for item in attachments:
-        if item.get("kind") == "image":
-            item["prompt"] = prompt
-            item["context"] = f"The user generated and shared this image from this prompt: {prompt}"
-    message = add_message("user", "", "image", attachments)
-    store = load_store()
-    for item in reversed(store.get("messages", [])):
-        if item.get("id") == message.get("id"):
-            item["context"] = f"The user generated and shared this image from this prompt: {prompt}"
-            break
-    save_store(store)
-    return store["messages"][-1]
-
-
-def generate_image_reaction(settings: dict, prompt: str, attachments: list[dict]) -> str:
-    user_name = settings["user_profile"].get("name") or "the user"
-    character_name = settings["character_profile"].get("name") or "Verity"
-    instruction = (
-        f"The user just generated and shared this image with you. React as {character_name}, "
-        "as if you can see the image. Keep it conversational, warm, and specific to what is visible. "
-        "Do not mention that you are an AI, do not describe technical image-generation details, and "
-        "do not repeat the prompt. If the image appears to include the user or character, respond naturally "
-        f"to that possibility without overclaiming identity. Address {user_name} directly if it feels natural."
-    )
-    try:
-        messages = context_messages(
-            settings,
-            f"{instruction}\n\nOriginal image prompt for context: {prompt}",
-            voice_reply=True,
-            attachments=attachments,
-        )
-        raw = complete_chat(settings, messages, temperature=settings["temperature"], max_tokens=180, timeout=90)
-        return clean_assistant_for_history(raw)
-    except Exception:
-        return ""
-
-
 def openrouter_api_key(settings: dict) -> str:
     return os.getenv("OPENROUTER_API_KEY") or settings.get("openrouter_api_key") or ""
 
@@ -952,225 +618,6 @@ def openrouter_headers(settings: dict) -> dict:
         "HTTP-Referer": "http://127.0.0.1:8790",
         "X-Title": settings.get("app_title") or "VerityVoice",
     }
-
-
-def openrouter_image_models(settings: dict) -> dict:
-    request = Request(
-        "https://openrouter.ai/api/v1/images/models",
-        headers=openrouter_headers(settings),
-        method="GET",
-    )
-    try:
-        with urlopen(request, timeout=30) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="ignore")
-        raise RuntimeError(f"OpenRouter returned {exc.code}: {detail}") from exc
-    except URLError as exc:
-        raise RuntimeError(f"Could not reach OpenRouter: {exc.reason}") from exc
-
-
-def choose_openrouter_image_model(settings: dict) -> str:
-    configured = str(settings.get("openrouter_image_model") or "").strip()
-    if configured:
-        return configured
-    data = openrouter_image_models(settings)
-    models = data.get("data", []) if isinstance(data, dict) else []
-    for model in models:
-        model_id = str(model.get("id") or "")
-        name = str(model.get("name") or "")
-        haystack = f"{model_id} {name}".lower()
-        if "grok" in haystack or "x-ai" in haystack or "xai" in haystack:
-            return model_id
-    if models:
-        return str(models[0].get("id") or "")
-    raise RuntimeError("OpenRouter did not return any image models.")
-
-
-def openrouter_image_model_parameters(settings: dict, model: str) -> dict:
-    encoded_model = quote(model, safe="/")
-    request = Request(
-        f"https://openrouter.ai/api/v1/images/models/{encoded_model}/endpoints",
-        headers=openrouter_headers(settings),
-        method="GET",
-    )
-    try:
-        with urlopen(request, timeout=30) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="ignore")
-        raise RuntimeError(f"OpenRouter model metadata returned {exc.code}: {detail}") from exc
-    except URLError as exc:
-        raise RuntimeError(f"Could not reach OpenRouter model metadata: {exc.reason}") from exc
-
-    supported = {}
-    for endpoint in data.get("endpoints", []):
-        for key, descriptor in (endpoint.get("supported_parameters") or {}).items():
-            supported[key] = descriptor
-    return supported
-
-
-def supported_enum_value(supported: dict, key: str, value: str) -> str:
-    descriptor = supported.get(key)
-    if not value or not descriptor:
-        return ""
-    if descriptor.get("type") != "enum":
-        return value
-    values = descriptor.get("values") or []
-    return value if value in values else ""
-
-
-def supported_reference_limit(supported: dict) -> int:
-    descriptor = supported.get("input_references")
-    if not descriptor:
-        return 0
-    if descriptor.get("type") == "range":
-        return max(0, int(descriptor.get("max") or 0))
-    if descriptor.get("type") == "boolean":
-        return 1
-    return 0
-
-
-def build_image_prompt(settings: dict, request_text: str) -> str:
-    store = load_store()
-    character = settings["character_profile"]
-    user = settings["user_profile"]
-    recent = "\n".join(
-        f"{item.get('role', 'unknown').upper()}: {item.get('content', '')}"
-        for item in store.get("messages", [])[-20:]
-        if item.get("content")
-    )
-    character_notes = "\n".join(
-        [
-            f"Character name: {character.get('name') or 'Verity'}",
-            f"Gender: {character.get('gender') or 'Unspecified'}",
-            f"Age: {character.get('age') or 'Unspecified'}",
-            f"Bio: {character.get('bio') or 'Unspecified'}",
-            f"Lore: {'; '.join(str(item) for item in character.get('memories', [])[-20:]) or 'None'}",
-            f"User name: {user.get('name') or 'User'}",
-        ]
-    )
-    instruction = (
-        "Create one concise photorealistic image-generation prompt for a companion app. "
-        "The image should feel grounded in the current conversation and character profile. "
-        "If the user asks for a selfie, describe a natural candid selfie of the character. "
-        "Do not include text, captions, watermarks, UI, speech bubbles, or prompt commentary. "
-        "Return only the final image prompt, 900 characters or fewer."
-    )
-    fallback = "Photorealistic candid portrait of the character, warm natural light, intimate conversational mood."
-    try:
-        raw = complete_chat(
-            settings,
-            [
-                {"role": "system", "content": "You write compact prompts for photorealistic image generation. Return only the prompt."},
-                {
-                    "role": "user",
-                    "content": (
-                        f"{instruction}\n\n"
-                        f"Character and user context:\n{character_notes}\n\n"
-                        f"Recent conversation:\n{recent[-12000:] or 'No recent conversation.'}\n\n"
-                        f"User image request:\n{request_text or 'Create an image that fits the current moment.'}"
-                    ),
-                },
-            ],
-            temperature=0.6,
-            max_tokens=260,
-            timeout=60,
-        )
-        prompt = re.sub(r"^```(?:\w+)?|```$", "", raw.strip()).strip().strip('"')
-        return prompt[:900] or fallback
-    except Exception:
-        if request_text:
-            return request_text[:900]
-        return fallback
-
-
-def generate_openrouter_image(
-    settings: dict,
-    prompt: str,
-    reference_images: list[dict] | None = None,
-    use_character_reference: bool = True,
-    allow_reference_fallback: bool = False,
-) -> dict:
-    model = choose_openrouter_image_model(settings)
-    supported = openrouter_image_model_parameters(settings, model)
-    output_format = str(settings.get("openrouter_image_output_format") or "png").lower()
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "n": 1,
-    }
-    if "output_format" in supported:
-        value = supported_enum_value(supported, "output_format", output_format)
-        if value:
-            payload["output_format"] = value
-    for source_key, request_key in (
-        ("openrouter_image_aspect_ratio", "aspect_ratio"),
-        ("openrouter_image_resolution", "resolution"),
-        ("openrouter_image_quality", "quality"),
-    ):
-        value = supported_enum_value(supported, request_key, str(settings.get(source_key) or "").strip())
-        if value:
-            payload[request_key] = value
-
-    avatar = settings["character_profile"].get("avatar")
-    input_references = []
-    if use_character_reference and settings.get("openrouter_use_character_reference", True) and str(avatar or "").startswith("data:image/"):
-        input_references.append({"type": "image_url", "image_url": {"url": avatar}})
-    for item in (reference_images or [])[:4]:
-        data_url = item.get("data_url", "")
-        if str(data_url).startswith("data:image/"):
-            input_references.append({"type": "image_url", "image_url": {"url": data_url}})
-    reference_limit = supported_reference_limit(supported)
-    if input_references and reference_limit:
-        payload["input_references"] = input_references[:reference_limit]
-
-    try:
-        data = post_openrouter_image(settings, payload)
-    except RuntimeError as exc:
-        if payload.get("input_references") and is_openrouter_upstream_400(exc) and allow_reference_fallback:
-            retry_payload = payload.copy()
-            retry_payload.pop("input_references", None)
-            data = post_openrouter_image(settings, retry_payload)
-            data["_warning"] = "xAI rejected the reference image request, so VerityVoice retried without references."
-        elif payload.get("input_references") and is_openrouter_upstream_400(exc):
-            raise RuntimeError(
-                "xAI rejected the reference images for this request. Try removing one reference image, using only the character avatar, or using a smaller JPEG reference."
-            ) from exc
-        else:
-            raise
-
-    images = data.get("data", []) if isinstance(data, dict) else []
-    if not images or not images[0].get("b64_json"):
-        raise RuntimeError("OpenRouter did not return an image.")
-    return {
-        "data_url": f"data:image/{output_format};base64,{images[0]['b64_json']}",
-        "usage": data.get("usage", {}),
-        "warning": data.get("_warning", ""),
-    }
-
-
-def is_openrouter_upstream_400(error: RuntimeError) -> bool:
-    text = str(error)
-    return "OpenRouter image generation returned 400" in text and "upstream returned 400" in text
-
-
-def post_openrouter_image(settings: dict, payload: dict) -> dict:
-    request = Request(
-        "https://openrouter.ai/api/v1/images",
-        data=json.dumps(payload).encode("utf-8"),
-        headers=openrouter_headers(settings),
-        method="POST",
-    )
-    try:
-        with urlopen(request, timeout=180) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="ignore")
-        raise RuntimeError(f"OpenRouter image generation returned {exc.code}: {detail}") from exc
-    except URLError as exc:
-        raise RuntimeError(f"Could not reach OpenRouter image generation: {exc.reason}") from exc
-    return data
 
 
 def cartesia_tts(settings: dict, text: str) -> bytes:

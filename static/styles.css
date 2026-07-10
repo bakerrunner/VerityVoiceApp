@@ -472,304 +472,6 @@ textarea:focus {
   min-width: 58px;
 }
 
-.hidden-file {
-  display: none;
-}
-
-.attachment-tray {
-  display: none;
-  gap: 8px;
-  padding: 0 16px 12px;
-  border-top: 1px solid rgba(49, 68, 58, 0.45);
-}
-
-.image-progress {
-  display: none;
-  gap: 7px;
-  padding: 0 16px 12px;
-  border-top: 1px solid rgba(49, 68, 58, 0.45);
-}
-
-.image-progress.is-active {
-  display: grid;
-}
-
-.image-progress-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.image-progress-track {
-  height: 7px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: #0f1713;
-}
-
-.image-progress-track span {
-  display: block;
-  width: 0%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #31a66b, #f2c84b);
-  transition: width 360ms ease;
-}
-
-.attachment-tray.has-items {
-  display: flex;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.message-attachments {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.attachment-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  max-width: min(280px, 100%);
-  min-width: 0;
-  min-height: 34px;
-  padding: 5px 9px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: #101914;
-  color: var(--text);
-  font-size: 13px;
-}
-
-.attachment-chip img {
-  width: 42px;
-  height: 42px;
-  border-radius: 5px;
-  object-fit: cover;
-}
-
-.image-thumb {
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.attachment-chip span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.attachment-chip button {
-  min-height: 24px;
-  padding: 0 7px;
-}
-
-.attachment-chip .image-thumb {
-  min-height: auto;
-  padding: 0;
-}
-
-.image-dialog {
-  width: min(980px, calc(100vw - 32px));
-  background: #0a0d0b;
-}
-
-.image-dialog-body {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-}
-
-.image-dialog img {
-  max-width: 100%;
-  max-height: calc(100vh - 150px);
-  object-fit: contain;
-  justify-self: center;
-}
-
-.image-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.image-viewer-prompt {
-  display: grid;
-  gap: 6px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: 10px 12px;
-  background: rgba(18, 62, 42, 0.22);
-}
-
-.image-viewer-prompt[hidden] {
-  display: none;
-}
-
-.image-viewer-prompt h3 {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.76rem;
-  text-transform: uppercase;
-}
-
-.image-viewer-prompt p {
-  margin: 0;
-  color: var(--text);
-  line-height: 1.45;
-  white-space: pre-wrap;
-}
-
-.image-dialog-actions a {
-  min-height: 42px;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--green);
-  border-radius: 7px;
-  padding: 0 15px;
-  color: var(--text);
-  background: #123e2a;
-  text-decoration: none;
-}
-
-.image-prompt-form {
-  display: grid;
-  gap: 14px;
-  padding: 18px;
-}
-
-.image-prompt-form header,
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.image-prompt-form h3 {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.image-prompt-form label {
-  display: grid;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.reference-tray {
-  min-height: 54px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 10px;
-  border: 1px solid rgba(49, 68, 58, 0.72);
-  border-radius: 7px;
-  background: #0f1713;
-}
-
-.reference-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 100%;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: #101914;
-}
-
-.reference-chip.is-muted {
-  opacity: 0.58;
-}
-
-.reference-chip img {
-  width: 46px;
-  height: 46px;
-  border-radius: 5px;
-  object-fit: cover;
-}
-
-.reference-chip span {
-  max-width: 220px;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.reference-chip button {
-  min-height: 28px;
-  padding: 0 9px;
-  font-size: 12px;
-}
-
-.image-dialog-progress {
-  display: grid;
-  gap: 7px;
-}
-
-.image-dialog-progress[hidden] {
-  display: none;
-}
-
-.image-preview-panel {
-  display: grid;
-  gap: 10px;
-}
-
-.image-preview-panel[hidden] {
-  display: none;
-}
-
-.image-preview-panel img {
-  width: 100%;
-  max-height: min(420px, 46vh);
-  object-fit: contain;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: #0a0d0b;
-}
-
-.image-preview-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.image-preview-actions a {
-  min-height: 42px;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--green);
-  border-radius: 7px;
-  padding: 0 15px;
-  color: var(--text);
-  background: #123e2a;
-  text-decoration: none;
-}
-
-.image-preview-actions a[aria-disabled="true"] {
-  cursor: default;
-  opacity: 0.52;
-  pointer-events: none;
-}
-
 .icon-button.is-listening {
   color: #fff6cf;
   background: #7a5a0d;
@@ -837,22 +539,6 @@ dialog::backdrop {
   display: grid;
 }
 
-.photo-row {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 14px;
-  align-items: center;
-}
-
-.photo-preview {
-  width: 78px;
-  height: 78px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: #0f1713;
-  border: 1px solid var(--line);
-}
-
 .check {
   display: flex !important;
   grid-template-columns: none;
@@ -862,20 +548,6 @@ dialog::backdrop {
 
 .check input {
   width: auto;
-}
-
-.inline-control {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  align-items: end;
-}
-
-.importer {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 10px;
-  align-items: center;
 }
 
 @media (max-width: 720px) {
@@ -997,7 +669,7 @@ dialog::backdrop {
 
   .composer {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: auto 1fr auto;
     gap: 7px;
     padding: 12px;
   }
@@ -1008,8 +680,6 @@ dialog::backdrop {
   }
 
   #resetChat,
-  #attachButton,
-  #imageButton,
   #sendButton {
     grid-row: 2;
     min-width: 0;
@@ -1022,25 +692,12 @@ dialog::backdrop {
     grid-column: span 1;
   }
 
-  .message-attachments,
-  .attachment-tray {
-    max-width: 100%;
-  }
-
-  .attachment-chip {
-    max-width: min(100%, 260px);
-  }
-
   dialog {
     width: calc(100vw - 18px);
     max-height: calc(100dvh - 18px);
   }
 
   .tabs {
-    grid-template-columns: 1fr;
-  }
-
-  .importer {
     grid-template-columns: 1fr;
   }
 }

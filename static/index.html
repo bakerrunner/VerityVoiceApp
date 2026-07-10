@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>VerityVoice</title>
-    <link rel="stylesheet" href="/styles.css?v=20260628-image-prompts">
+    <link rel="stylesheet" href="/styles.css?v=20260710-slim">
   </head>
   <body>
     <main class="shell">
@@ -45,22 +45,9 @@
 
         <form id="composer" class="composer">
           <button id="resetChat" class="danger" type="button">New Chat</button>
-          <button id="attachButton" type="button" class="icon-button" title="Attach image or text file">Attach</button>
-          <button id="imageButton" type="button" class="icon-button" title="Generate an image from your prompt">Image</button>
-          <input id="fileInput" class="hidden-file" type="file" multiple>
           <input id="textInput" autocomplete="off" placeholder="Talk to Verity..." aria-label="Message Verity">
           <button id="sendButton" type="submit" class="send">Send</button>
         </form>
-        <div id="imageProgress" class="image-progress" aria-hidden="true">
-          <div class="image-progress-meta">
-            <span id="imageProgressLabel">Preparing image...</span>
-            <span id="imageProgressPercent">0%</span>
-          </div>
-          <div class="image-progress-track">
-            <span id="imageProgressBar"></span>
-          </div>
-        </div>
-        <div id="attachmentTray" class="attachment-tray" aria-live="polite"></div>
       </section>
     </main>
 
@@ -78,13 +65,6 @@
         </div>
 
         <section id="userPanel" class="tab-panel is-active">
-          <div class="photo-row">
-            <img id="userPhotoPreview" class="photo-preview" alt="">
-            <label>
-              User photo
-              <input id="userPhoto" type="file" accept="image/*">
-            </label>
-          </div>
           <label>Name <input id="userName" type="text"></label>
           <label>Gender <input id="userGender" type="text"></label>
           <label>Birthdate <input id="userBirthdate" type="date"></label>
@@ -94,13 +74,6 @@
         </section>
 
         <section id="characterPanel" class="tab-panel">
-          <div class="photo-row">
-            <img id="characterAvatarPreview" class="photo-preview" alt="">
-            <label>
-              Character avatar
-              <input id="characterAvatar" type="file" accept="image/*">
-            </label>
-          </div>
           <label>Name <input id="characterName" type="text"></label>
           <label>Gender <input id="characterGender" type="text"></label>
           <label>Age <input id="characterAge" type="text"></label>
@@ -127,39 +100,8 @@
           <label>Cartesia API key <input id="cartesiaKey" type="password" placeholder="Leave blank to keep saved key"></label>
           <label>Cartesia voice ID <input id="cartesiaVoice" type="text"></label>
           <label>Cartesia model <input id="cartesiaModel" type="text"></label>
-          <label class="check"><input id="cartesiaSttEnabled" type="checkbox">Use Cartesia Ink-2 mic</label>
           <label>Cartesia STT model <input id="cartesiaSttModel" type="text"></label>
-          <label>Image provider
-            <select id="imageProvider">
-              <option value="openrouter">OpenRouter</option>
-              <option value="none">Disabled</option>
-            </select>
-          </label>
           <label>OpenRouter API key <input id="openrouterKey" type="password" placeholder="Leave blank to keep saved key"></label>
-          <div class="inline-control">
-            <label>OpenRouter image model <input id="openrouterImageModel" type="text" list="openrouterImageModels" placeholder="Leave blank to auto-pick Grok/xAI if available"></label>
-            <button id="loadImageModels" type="button">Models</button>
-          </div>
-          <datalist id="openrouterImageModels"></datalist>
-          <label>Image aspect ratio <input id="openrouterImageAspect" type="text" placeholder="1:1"></label>
-          <label>Image resolution <input id="openrouterImageResolution" type="text" placeholder="optional, e.g. 1K"></label>
-          <label>Image quality
-            <select id="openrouterImageQuality">
-              <option value="">Default</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="auto">Auto</option>
-            </select>
-          </label>
-          <label>Image output format
-            <select id="openrouterImageFormat">
-              <option value="png">PNG</option>
-              <option value="jpeg">JPEG</option>
-              <option value="webp">WebP</option>
-            </select>
-          </label>
-          <label class="check"><input id="openrouterUseCharacterReference" type="checkbox">Use character avatar as image reference</label>
           <label class="check"><input id="fullHistory" type="checkbox">Send full transcript as context</label>
           <label>Context messages when full history is off <input id="maxMessages" type="number" min="4" step="1"></label>
           <label class="check"><input id="fastVoiceContext" type="checkbox">Use faster recent context for voice</label>
@@ -167,69 +109,10 @@
           <label>Carryover turns after New Chat <input id="carryoverTurns" type="number" min="0" step="1"></label>
         </section>
 
-        <div class="importer">
-          <input id="importFile" type="file" accept="application/json">
-          <label class="check">
-            <input id="replaceImport" type="checkbox">
-            Replace current transcript
-          </label>
-          <button id="importButton" type="button">Import JSON</button>
-        </div>
-
         <button id="saveSettings" class="send" type="button">Save</button>
       </form>
     </dialog>
 
-    <dialog id="imageDialog" class="image-dialog">
-      <div class="image-dialog-body">
-        <img id="imageDialogImg" alt="">
-        <section id="imageViewerPrompt" class="image-viewer-prompt" hidden>
-          <h3>Prompt</h3>
-          <p id="imageViewerPromptText"></p>
-        </section>
-        <div class="image-dialog-actions">
-          <a id="imageDownload" download>Download</a>
-          <button id="imageClose" type="button">Close</button>
-        </div>
-      </div>
-    </dialog>
-
-    <dialog id="imagePromptDialog">
-      <form method="dialog" class="image-prompt-form">
-        <header>
-          <h2>Generate Image</h2>
-          <button id="imagePromptClose" type="submit">Close</button>
-        </header>
-        <label>Prompt <textarea id="imagePromptText" rows="6" placeholder="Describe the image you want..."></textarea></label>
-        <section>
-          <div class="section-head">
-            <h3>References</h3>
-            <button id="imageReferenceAdd" type="button">Add Image</button>
-          </div>
-          <input id="imageReferenceInput" class="hidden-file" type="file" accept="image/*" multiple>
-          <div id="imageReferenceTray" class="reference-tray"></div>
-        </section>
-        <div id="imageDialogProgress" class="image-dialog-progress" hidden>
-          <div class="image-progress-meta">
-            <span id="imageDialogProgressLabel">Preparing image...</span>
-            <span id="imageDialogProgressPercent">0%</span>
-          </div>
-          <div class="image-progress-track">
-            <span id="imageDialogProgressBar"></span>
-          </div>
-        </div>
-        <section id="imagePreviewPanel" class="image-preview-panel" hidden>
-          <img id="imagePreviewImg" alt="">
-          <div class="image-preview-actions">
-            <a id="imagePreviewDownload" download>Download</a>
-            <button id="imagePreviewDelete" class="danger" type="button">Delete</button>
-            <button id="imagePreviewPost" class="send" type="button">Post</button>
-          </div>
-        </section>
-        <button id="imagePromptGenerate" class="send" type="button">Generate</button>
-      </form>
-    </dialog>
-
-    <script src="/app.js?v=20260628-image-prompts"></script>
+    <script src="/app.js?v=20260710-slim"></script>
   </body>
 </html>
