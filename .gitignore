@@ -1,0 +1,20 @@
+# Runtime state and private local data
+data/*.json
+!data/settings.example.json
+data/chats/
+data/*.tmp
+
+# Local Python/runtime artifacts
+__pycache__/
+*.py[cod]
+
+# Local media and generated assets
+NEW_MAYA.mp3
+NEW_MAYA.wav
+*.log
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

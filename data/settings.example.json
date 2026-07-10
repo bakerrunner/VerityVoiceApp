@@ -1,0 +1,28 @@
+{
+  "app_title": "VerityVoice",
+  "assistant_name": "Maya",
+  "lmstudio_base_url": "http://127.0.0.1:1234/v1",
+  "lmstudio_model": "google/gemma-4-e2b",
+  "lmstudio_keepalive_enabled": true,
+  "lmstudio_keepalive_interval": 120,
+  "temperature": 0.8,
+  "max_context_messages": 80,
+  "max_response_tokens": 900,
+  "fast_voice_context": true,
+  "voice_context_messages": 8,
+  "cartesia_api_key": "",
+  "cartesia_voice_id": "21cd940a-e771-4ae6-b0c5-1757e2748493",
+  "cartesia_model_id": "sonic-3.5",
+  "use_cartesia_stt": true,
+  "cartesia_stt_model": "ink-2",
+  "cartesia_version": "2026-03-01",
+  "image_provider": "openrouter",
+  "openrouter_api_key": "",
+  "openrouter_image_model": "",
+  "openrouter_image_aspect_ratio": "1:1",
+  "openrouter_image_resolution": "",
+  "openrouter_image_quality": "medium",
+  "openrouter_image_output_format": "png",
+  "openrouter_use_character_reference": true
+}
+

@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VerityVoice</title>
+    <link rel="stylesheet" href="/styles.css?v=20260628-image-prompts">
+  </head>
+  <body>
+    <main class="shell">
+      <section id="chatPanel" class="chat" aria-label="VerityVoice chat">
+        <header class="topbar">
+          <div>
+            <h1 id="appTitle">VerityVoice</h1>
+            <p id="status">Starting...</p>
+          </div>
+          <div class="actions">
+            <button id="textToggle" class="toggle" type="button" aria-pressed="true">Text</button>
+            <button id="callToggle" type="button" aria-pressed="false">Call</button>
+            <button id="adminOpen" type="button">Admin</button>
+          </div>
+        </header>
+
+        <div id="callView" class="call-view" aria-hidden="true">
+          <div id="callCard" class="call-card">
+            <div id="callAvatar" class="call-avatar"></div>
+            <div class="call-meta">
+              <h2 id="callName">Maya</h2>
+              <p id="callStatus">Ready</p>
+            </div>
+            <div class="call-visual" aria-hidden="true">
+              <div class="voice-orb">
+                <div class="orb-core"></div>
+                <div class="orb-ring"></div>
+                <div class="orb-ring orb-ring-2"></div>
+              </div>
+            </div>
+            <div class="call-actions">
+              <button id="callMicButton" type="button">Mic</button>
+              <button id="endCallButton" class="danger" type="button">End</button>
+            </div>
+          </div>
+        </div>
+        <div id="messages" class="messages" aria-live="polite"></div>
+
+        <form id="composer" class="composer">
+          <button id="resetChat" class="danger" type="button">New Chat</button>
+          <button id="attachButton" type="button" class="icon-button" title="Attach image or text file">Attach</button>
+          <button id="imageButton" type="button" class="icon-button" title="Generate an image from your prompt">Image</button>
+          <input id="fileInput" class="hidden-file" type="file" multiple>
+          <input id="textInput" autocomplete="off" placeholder="Talk to Maya..." aria-label="Message Maya">
+          <button id="sendButton" type="submit" class="send">Send</button>
+        </form>
+        <div id="imageProgress" class="image-progress" aria-hidden="true">
+          <div class="image-progress-meta">
+            <span id="imageProgressLabel">Preparing image...</span>
+            <span id="imageProgressPercent">0%</span>
+          </div>
+          <div class="image-progress-track">
+            <span id="imageProgressBar"></span>
+          </div>
+        </div>
+        <div id="attachmentTray" class="attachment-tray" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <dialog id="adminDialog">
+      <form method="dialog" class="admin">
+        <header>
+          <h2>Admin</h2>
+          <button id="adminClose" type="submit">Close</button>
+        </header>
+
+        <div class="tabs" role="tablist">
+          <button class="tab is-active" data-tab="userPanel" type="button">User Settings</button>
+          <button class="tab" data-tab="characterPanel" type="button">Character Settings</button>
+          <button class="tab" data-tab="technicalPanel" type="button">Technical</button>
+        </div>
+
+        <section id="userPanel" class="tab-panel is-active">
+          <div class="photo-row">
+            <img id="userPhotoPreview" class="photo-preview" alt="">
+            <label>
+              User photo
+              <input id="userPhoto" type="file" accept="image/*">
+            </label>
+          </div>
+          <label>Name <input id="userName" type="text"></label>
+          <label>Gender <input id="userGender" type="text"></label>
+          <label>Birthdate <input id="userBirthdate" type="date"></label>
+          <label>Location <input id="userLocation" type="text" placeholder="City, State"></label>
+          <label>Bio <textarea id="userBio" rows="4"></textarea></label>
+          <label>System notes <textarea id="userSystemNotes" rows="4"></textarea></label>
+        </section>
+
+        <section id="characterPanel" class="tab-panel">
+          <div class="photo-row">
+            <img id="characterAvatarPreview" class="photo-preview" alt="">
+            <label>
+              Character avatar
+              <input id="characterAvatar" type="file" accept="image/*">
+            </label>
+          </div>
+          <label>Name <input id="characterName" type="text"></label>
+          <label>Gender <input id="characterGender" type="text"></label>
+          <label>Age <input id="characterAge" type="text"></label>
+          <label>Bio <textarea id="characterBio" rows="4"></textarea></label>
+          <label>System prompt <textarea id="characterSystemPrompt" rows="6"></textarea></label>
+          <label>System notes <textarea id="characterSystemNotes" rows="4"></textarea></label>
+          <label>Long-term memory / lore <textarea id="characterMemories" rows="8"></textarea></label>
+        </section>
+
+        <section id="technicalPanel" class="tab-panel">
+          <label>LM Studio URL <input id="lmUrl" type="text"></label>
+          <label>Model <input id="lmModel" type="text"></label>
+          <label>Temperature <input id="temperature" type="number" min="0" max="2" step="0.05"></label>
+          <label class="check"><input id="lmKeepaliveEnabled" type="checkbox">Keep LM Studio warm while VerityVoice is open</label>
+          <label>LM Studio keepalive interval seconds <input id="lmKeepaliveInterval" type="number" min="30" step="10"></label>
+          <label>Cartesia API key <input id="cartesiaKey" type="password" placeholder="Leave blank to keep saved key"></label>
+          <label>Cartesia voice ID <input id="cartesiaVoice" type="text"></label>
+          <label>Cartesia model <input id="cartesiaModel" type="text"></label>
+          <label class="check"><input id="cartesiaSttEnabled" type="checkbox">Use Cartesia Ink-2 mic</label>
+          <label>Cartesia STT model <input id="cartesiaSttModel" type="text"></label>
+          <label>Image provider
+            <select id="imageProvider">
+              <option value="openrouter">OpenRouter</option>
+              <option value="none">Disabled</option>
+            </select>
+          </label>
+          <label>OpenRouter API key <input id="openrouterKey" type="password" placeholder="Leave blank to keep saved key"></label>
+          <div class="inline-control">
+            <label>OpenRouter image model <input id="openrouterImageModel" type="text" list="openrouterImageModels" placeholder="Leave blank to auto-pick Grok/xAI if available"></label>
+            <button id="loadImageModels" type="button">Models</button>
+          </div>
+          <datalist id="openrouterImageModels"></datalist>
+          <label>Image aspect ratio <input id="openrouterImageAspect" type="text" placeholder="1:1"></label>
+          <label>Image resolution <input id="openrouterImageResolution" type="text" placeholder="optional, e.g. 1K"></label>
+          <label>Image quality
+            <select id="openrouterImageQuality">
+              <option value="">Default</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="auto">Auto</option>
+            </select>
+          </label>
+          <label>Image output format
+            <select id="openrouterImageFormat">
+              <option value="png">PNG</option>
+              <option value="jpeg">JPEG</option>
+              <option value="webp">WebP</option>
+            </select>
+          </label>
+          <label class="check"><input id="openrouterUseCharacterReference" type="checkbox">Use character avatar as image reference</label>
+          <label class="check"><input id="fullHistory" type="checkbox">Send full transcript as context</label>
+          <label>Context messages when full history is off <input id="maxMessages" type="number" min="4" step="1"></label>
+          <label class="check"><input id="fastVoiceContext" type="checkbox">Use faster recent context for voice</label>
+          <label>Voice context messages <input id="voiceMessages" type="number" min="4" step="1"></label>
+          <label>Carryover turns after New Chat <input id="carryoverTurns" type="number" min="0" step="1"></label>
+        </section>
+
+        <div class="importer">
+          <input id="importFile" type="file" accept="application/json">
+          <label class="check">
+            <input id="replaceImport" type="checkbox">
+            Replace current transcript
+          </label>
+          <button id="importButton" type="button">Import JSON</button>
+        </div>
+
+        <button id="saveSettings" class="send" type="button">Save</button>
+      </form>
+    </dialog>
+
+    <dialog id="imageDialog" class="image-dialog">
+      <div class="image-dialog-body">
+        <img id="imageDialogImg" alt="">
+        <section id="imageViewerPrompt" class="image-viewer-prompt" hidden>
+          <h3>Prompt</h3>
+          <p id="imageViewerPromptText"></p>
+        </section>
+        <div class="image-dialog-actions">
+          <a id="imageDownload" download>Download</a>
+          <button id="imageClose" type="button">Close</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="imagePromptDialog">
+      <form method="dialog" class="image-prompt-form">
+        <header>
+          <h2>Generate Image</h2>
+          <button id="imagePromptClose" type="submit">Close</button>
+        </header>
+        <label>Prompt <textarea id="imagePromptText" rows="6" placeholder="Describe the image you want..."></textarea></label>
+        <section>
+          <div class="section-head">
+            <h3>References</h3>
+            <button id="imageReferenceAdd" type="button">Add Image</button>
+          </div>
+          <input id="imageReferenceInput" class="hidden-file" type="file" accept="image/*" multiple>
+          <div id="imageReferenceTray" class="reference-tray"></div>
+        </section>
+        <div id="imageDialogProgress" class="image-dialog-progress" hidden>
+          <div class="image-progress-meta">
+            <span id="imageDialogProgressLabel">Preparing image...</span>
+            <span id="imageDialogProgressPercent">0%</span>
+          </div>
+          <div class="image-progress-track">
+            <span id="imageDialogProgressBar"></span>
+          </div>
+        </div>
+        <section id="imagePreviewPanel" class="image-preview-panel" hidden>
+          <img id="imagePreviewImg" alt="">
+          <div class="image-preview-actions">
+            <a id="imagePreviewDownload" download>Download</a>
+            <button id="imagePreviewDelete" class="danger" type="button">Delete</button>
+            <button id="imagePreviewPost" class="send" type="button">Post</button>
+          </div>
+        </section>
+        <button id="imagePromptGenerate" class="send" type="button">Generate</button>
+      </form>
+    </dialog>
+
+    <script src="/app.js?v=20260628-image-prompts"></script>
+  </body>
+</html>
