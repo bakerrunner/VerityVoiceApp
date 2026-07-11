@@ -36,7 +36,7 @@ Runtime conversations, settings, memories, avatars, and API keys are stored loca
 python server.py
 ```
 
-4. Open `http://127.0.0.1:8790`.
+4. Open `http://127.0.0.1:8789`.
 5. Open Admin and configure the app.
 
 On first run, VerityVoice creates:
@@ -57,8 +57,8 @@ Double-click `Start-VerityVoice.bat`, or run:
 
 The launcher binds to all local interfaces so you can use:
 
-- Server PC: `http://127.0.0.1:8790`
-- LAN or WireGuard device: `http://YOUR-PC-IP:8790`
+- Server PC: `http://127.0.0.1:8789`
+- LAN or WireGuard device: `http://YOUR-PC-IP:8789`
 
 Use a private network such as WireGuard. Do not expose the app directly to the public internet.
 

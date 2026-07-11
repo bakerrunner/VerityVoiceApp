@@ -4,7 +4,7 @@ $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location -LiteralPath $ProjectRoot
 
 $env:HOST = "0.0.0.0"
-$env:PORT = "8790"
+$env:PORT = "8789"
 $Port = [int]$env:PORT
 
 $listeners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue

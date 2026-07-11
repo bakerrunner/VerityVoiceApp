@@ -676,7 +676,7 @@ def openrouter_headers(settings: dict) -> dict:
     return {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "http://127.0.0.1:8790",
+        "HTTP-Referer": "http://127.0.0.1:8789",
         "X-Title": settings.get("app_title") or "VerityVoice",
     }
 
@@ -749,7 +749,7 @@ def cartesia_access_token(settings: dict) -> dict:
 if __name__ == "__main__":
     ensure_files()
     host = os.getenv("HOST", "127.0.0.1")
-    port = int(os.getenv("PORT", "8790"))
+    port = int(os.getenv("PORT", "8789"))
     server = ThreadingHTTPServer((host, port), Handler)
     if sys.stdout:
         print(f"VerityVoice is ready at http://{host}:{port}")
