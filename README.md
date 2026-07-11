@@ -62,6 +62,25 @@ The launcher binds to all local interfaces so you can use:
 
 Use a private network such as WireGuard. Do not expose the app directly to the public internet.
 
+## Optional HTTPS
+
+VerityVoice can serve HTTPS when local certificate files are present.
+
+Place these files in `certs/`:
+
+- `certs/server.crt`
+- `certs/server.key`
+
+Then start the app with `Start-VerityVoice.bat` or `Start-VerityVoice.ps1`. The launcher detects those files and switches the app URL to `https://`.
+
+For WireGuard iPhone access, the server certificate must include the exact IP or hostname used on the phone. For example, if the PC WireGuard IP is `192.168.137.1`, the iPhone URL is:
+
+```text
+https://192.168.137.1:8789
+```
+
+Keep certificate files private. The `certs/` folder is ignored by Git.
+
 ## Admin Setup
 
 Admin has three sections:

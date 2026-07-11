@@ -6,6 +6,18 @@ Set-Location -LiteralPath $ProjectRoot
 $env:HOST = "0.0.0.0"
 $env:PORT = "8789"
 $Port = [int]$env:PORT
+$CertFile = Join-Path $ProjectRoot "certs\server.crt"
+$KeyFile = Join-Path $ProjectRoot "certs\server.key"
+$Scheme = "http"
+
+if ((Test-Path -LiteralPath $CertFile) -and (Test-Path -LiteralPath $KeyFile)) {
+    $env:SSL_CERT_FILE = $CertFile
+    $env:SSL_KEY_FILE = $KeyFile
+    $Scheme = "https"
+} else {
+    Remove-Item Env:\SSL_CERT_FILE -ErrorAction SilentlyContinue
+    Remove-Item Env:\SSL_KEY_FILE -ErrorAction SilentlyContinue
+}
 
 $listeners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
 if ($listeners) {
@@ -27,8 +39,8 @@ if ($listeners) {
 
 Write-Host ""
 Write-Host "Starting VerityVoice..." -ForegroundColor Green
-Write-Host "Server PC URL: http://127.0.0.1:$Port" -ForegroundColor Cyan
-Write-Host "LAN/WireGuard URL: http://YOUR-PC-IP:$Port" -ForegroundColor Cyan
+Write-Host "Server PC URL: ${Scheme}://127.0.0.1:$Port" -ForegroundColor Cyan
+Write-Host "LAN/WireGuard URL: ${Scheme}://YOUR-PC-IP:$Port" -ForegroundColor Cyan
 Write-Host "Press Ctrl+C in this window to stop VerityVoice." -ForegroundColor Yellow
 Write-Host ""
 

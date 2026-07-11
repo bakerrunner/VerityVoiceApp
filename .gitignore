@@ -12,6 +12,7 @@ __pycache__/
 *.mp3
 *.wav
 *.log
+certs/
 
 # Editor and OS noise
 .DS_Store

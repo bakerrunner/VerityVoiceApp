@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import ssl
 import sys
 import time
 import uuid
@@ -751,6 +752,14 @@ if __name__ == "__main__":
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", "8789"))
     server = ThreadingHTTPServer((host, port), Handler)
+    scheme = "http"
+    cert_file = os.getenv("SSL_CERT_FILE")
+    key_file = os.getenv("SSL_KEY_FILE")
+    if cert_file and key_file:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+        server.socket = context.wrap_socket(server.socket, server_side=True)
+        scheme = "https"
     if sys.stdout:
-        print(f"VerityVoice is ready at http://{host}:{port}")
+        print(f"VerityVoice is ready at {scheme}://{host}:{port}")
     server.serve_forever()
