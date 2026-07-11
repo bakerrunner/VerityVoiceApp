@@ -48,6 +48,7 @@ let orbTargetLevel = 0;
 let orbAnimationFrame = 0;
 let pendingUserAvatar = null;
 let pendingCharacterAvatar = null;
+let playbackAudioContext = null;
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -173,6 +174,29 @@ function audioLevelFromFloat32(samples) {
   }
   const rms = Math.sqrt(sum / samples.length);
   return Math.min(1, Math.max(rms * 7.5, peak * 1.4));
+}
+
+function createAudioContext(options = {}) {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) throw new Error("This browser does not support audio playback");
+  return new AudioContextClass(options);
+}
+
+function primeAudioPlayback() {
+  try {
+    if (!playbackAudioContext) playbackAudioContext = createAudioContext({ sampleRate: 24000 });
+    playbackAudioContext.resume?.();
+    const buffer = playbackAudioContext.createBuffer(1, 1, playbackAudioContext.sampleRate);
+    const source = playbackAudioContext.createBufferSource();
+    const gain = playbackAudioContext.createGain();
+    gain.gain.value = 0;
+    source.buffer = buffer;
+    source.connect(gain);
+    gain.connect(playbackAudioContext.destination);
+    source.start(0);
+  } catch {
+    // iOS may require a user gesture; this is best-effort and retried on Mic taps.
+  }
 }
 
 function render() {
@@ -750,7 +774,7 @@ class PcmStreamPlayer {
 
   ensureContext() {
     if (!this.audioContext) {
-      this.audioContext = new AudioContext({ sampleRate: this.sampleRate });
+      this.audioContext = playbackAudioContext || createAudioContext({ sampleRate: this.sampleRate });
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 512;
       this.meterData = new Float32Array(this.analyser.fftSize);
@@ -892,7 +916,7 @@ async function startCartesiaStt() {
       autoGainControl: true,
     },
   });
-  const audioContext = new AudioContext();
+  const audioContext = createAudioContext();
   const source = audioContext.createMediaStreamSource(stream);
   const processor = audioContext.createScriptProcessor(2048, 1, 1);
   source.connect(processor);
@@ -1023,6 +1047,7 @@ form.addEventListener("submit", (event) => {
 textToggle.addEventListener("click", () => setCallMode(false));
 callToggle.addEventListener("click", () => setCallMode(true));
 callMicButton.addEventListener("click", () => {
+  primeAudioPlayback();
   if (handsFreeMic) {
     setStatus(micIsListening() ? "Listening..." : "Voice chat is active");
     return;
